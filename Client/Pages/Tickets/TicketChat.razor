@@ -1,0 +1,115 @@
+﻿@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@inject IJSRuntime jsRuntime
+@using System.Security.Claims
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject HttpClient Http
+@attribute [Authorize(Roles = "super,general,admin")]
+@inject NavigationManager NavigationManager
+@inject Blazored.LocalStorage.ISyncLocalStorageService localStorage
+@inject IModalService Modal
+@using AutenticacionBlazor.Shared.Modelos.Global
+@using AutenticacionBlazor.Shared.Modelos.Tickets
+@inject NavigationManager NavMananger
+
+
+@if (_mensajes != null && _archivos != null)
+{
+<div class="messages" style="max-height: 53vh;height:53vh;overflow: auto;">
+    @foreach (var msj in _mensajes)
+    {
+        @if (msj.Envia == 0 || msj.Envia == 1)
+        {
+            <div class="row mx-3 mb-2">
+                <div class="col-xl-10">
+                    <div class="card card-dashed bg-light-dark">
+                        <div class="card-body">
+                            <h5 class="card-title">Persona municipal</h5>
+                            <h6 class="card-subtitle mb-2 text-muted">@msj.Fecha_graba</h6>
+                            <p class="card-text">@msj.Id @msj.Mensaje</p>
+                            <div class="separator separator-dashed mt-5 mb-5"></div>
+                            @foreach (var archivo in _archivos)
+                            {
+                                @if (archivo.Id_ticket_detalle == msj.Id)
+                                {
+                                    <button @onclick="@(async () => Descargar(archivo.Descargar))" class="card-link">@archivo.Nombre</button>
+                                }
+
+                            }
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-2"></div>
+            </div>
+        }
+        else
+        {
+            <div class="row mx-3 mb-2">
+                <div class="col-xl-2"></div>
+                <div class="col-xl-10">
+                    <div class="card card-dashed bg-light-success text-end">
+                        <div class="card-body">
+                            <h5 class="card-title">Usuario</h5>
+                            <h6 class="card-subtitle mb-2 text-muted">@msj.Fecha_graba</h6>
+                            <p class="card-text">@msj.Mensaje</p>
+                            <div class="separator separator-dashed mt-5 mb-5"></div>
+                            @foreach (var archivo in _archivos)
+                            {
+                                @if (archivo.Id_ticket_detalle == msj.Id)
+                                {
+                                    <button @onclick="@(async () => Descargar(archivo.Descargar))" class="card-link">@archivo.Nombre</button>
+                                }
+
+                            }
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
+    }
+
+    
+
+</div>
+<iframe id="Archivo" runat="server" src="@(descargaarchivos)" height="0" width="0" style="display:none;" ></iframe>
+}
+
+
+
+@code {
+    [Parameter] public string NumeroTramite { get; set; }
+    [Parameter] public int Respuesta { get; set; }
+    private MTicketChat[] _mensajes;
+    private MTicketArchivos[] _archivos;
+    public string descargaarchivos;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarDatos();
+        descargaarchivos = "";
+    }
+
+    protected async Task CargarDatos()
+    {
+        await jsRuntime.InvokeVoidAsync("SwalLoading");
+        _mensajes = await Http.GetFromJsonAsync<MTicketChat[]>("api/Ticket/Tramite/Info/" + NumeroTramite);
+        _archivos = await Http.GetFromJsonAsync<MTicketArchivos[]>("api/Ticket/Tramite/Archivos/" + NumeroTramite);
+
+        if (_mensajes != null && _archivos != null)
+        {
+            await jsRuntime.InvokeVoidAsync("SwalCerrar", "2");
+        }
+    }
+
+    private void Descargar(string urlArchivos)
+    {
+        //Desahibilitar boton por unos segundos para evitar descargas repetidas
+        descargaarchivos = NavMananger.BaseUri + urlArchivos;
+        StateHasChanged();
+    }
+
+
+
+}

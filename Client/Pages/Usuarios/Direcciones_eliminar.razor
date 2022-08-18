@@ -1,0 +1,99 @@
+﻿@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@layout MainLayout
+@inject IJSRuntime jsRuntime
+@using System.Security.Claims
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject HttpClient Http
+@using AutenticacionBlazor.Shared.Modelos.Global
+@using AutenticacionBlazor.Shared.Modelos.Personas
+@using AutenticacionBlazor.Shared.Modelos.Personas.Fisica
+@using AutenticacionBlazor.Shared.Modelos.Personas.Juridica
+@attribute [Authorize(Roles = "super,general")]
+@inject NavigationManager NavigationManager
+@inject Blazored.LocalStorage.ISyncLocalStorageService localStorage
+@using AutenticacionBlazor.Shared.Models.Identity
+
+@if (_bajaDireccion != null)
+{
+    <div class="modal-backdrop fade show"></div>
+    <div class="modal fade show d-block" style="pointer-events: none;" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable" role="document">
+            <EditForm Model=@_eliminarDireccion OnValidSubmit=@EliminarDireccion class="form w-100" id="CC">
+                <div class="modal-content border-primary">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="staticBackdropLabel">@ModalInstance.Title</h5>
+                        <button type="button" class="btn-close" @onclick="CerrarModalEditar" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body" style="max-height: 75vh; overflow-y: auto;">
+                        <DataAnnotationsValidator />
+
+                        <div class="fv-row mb-5">
+                            <label class="form-label fw-bolder text-gray-900 fs-6">Motivo de baja:</label>
+                            <input @bind="@_eliminarDireccion.Motivo" class="form-control" placeholder="Motivo de baja" />
+                            <ValidationMessage For="@(() => _eliminarDireccion.Motivo)" />
+                        </div>
+                        @*<ValidationSummary />*@
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-success mr-2">Guardar</button>
+                        <button type="reset" class="btn btn-secondary" @onclick="CerrarModalEditar">Cancelar</button>
+                    </div>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+}
+
+@code {
+    [CascadingParameter] BlazoredModalInstance ModalInstance { get; set; }
+    [Parameter] public MMisDirecciones _bajaDireccion { get; set; }
+    private MRespuestaBoolMensaje _resultado;
+    private MRespuestaBoolMensaje resultado = new MRespuestaBoolMensaje();
+    private MEliminarDireccion _eliminarDireccion = new MEliminarDireccion();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            if (_bajaDireccion != null)
+            {
+                _eliminarDireccion.Id = _bajaDireccion.Id_persona_direccion;
+            }
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            await ModalInstance.CloseAsync();
+        }
+        await jsRuntime.InvokeVoidAsync("SwalCerrar", "1");
+    }
+
+    protected async Task EliminarDireccion()
+    {
+        using var response = await Http.PostAsJsonAsync("api/Personas/Direccion/Borrar", _eliminarDireccion);
+        resultado = await response.Content.ReadFromJsonAsync<MRespuestaBoolMensaje>();
+        if (resultado.resultado == true)
+        {
+            var Confirm1 = await jsRuntime.InvokeAsync<bool>("SwalNormal", "Se ha guardo correctamente los datos!", resultado.mensaje, "success", false);
+            if (Confirm1)
+            {
+                await ModalInstance.CloseAsync(ModalResult.Ok<MEliminarDireccion>(_eliminarDireccion));
+                await jsRuntime.InvokeVoidAsync("SwalCerrar", "2");
+            }
+        }
+        else
+        {
+            var Confirm2 = await jsRuntime.InvokeAsync<bool>("SwalNormal", "Oops...", resultado.mensaje, "error", false);
+            if (Confirm2)
+            {
+                CerrarModalEditar();
+                await jsRuntime.InvokeVoidAsync("SwalCerrar", "2");
+            }
+        }
+    }
+
+    void CerrarModalEditar()
+    {
+        ModalInstance.CloseAsync(ModalResult.Cancel());
+    }
+}

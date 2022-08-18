@@ -1,0 +1,264 @@
+﻿@page "/Usuarios/AspNetUsers"
+@layout NuevoLayout
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@inject HttpClient Http
+@attribute [Authorize(Roles = "admin, super")]
+@using AutenticacionBlazor.Shared.Modelos.Identity
+@using AutenticacionBlazor.Shared.Modelos.Global
+@inject NavigationManager NavigationManager
+@inject IModalService Modal
+@inject IJSRuntime JSRuntime
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@using Newtonsoft.Json
+@inject IJSRuntime jsRuntime
+
+<AuthorizeView>
+    <Authorized>
+        <div class="card card-custom gutter-b">
+            <div class="card-header border-0 py-5">
+                <h3 class="card-title align-items-start flex-column">
+                    <span class="card-label font-weight-bolder text-dark font-size-h2 pt-2">Usuarios:</span>
+                </h3>
+            </div>
+        </div>
+        @if (aspnetusers == null)
+        {
+            <div class="row">
+                <div class="col-12">
+                    <div class="spinner spinner-track spinner-primary spinner-lg mr-15" style="margin-left: 43%;"></div>
+                </div>
+            </div>
+            <br />
+            <div class="row">
+                <div class="col-12">
+                    <p style="margin-left: 43%;"><b>Cargando...</b></p>
+                </div>
+            </div>
+        }
+        else
+        {
+            @*<EditForm Model=@aspnetusers>
+                    <div class="row" style="display:flex;flex-direction:row;align-items:flex-end;justify-content:space-between">
+                        <div class="col-10">
+                            <label><i><b>Búsqueda por mail:</b></i></label>
+                            <input @bind="@term" class="form-control" placeholder="Buscar..." />
+                        </div>
+                        <div class="col-2">
+                            <button class="btn btn-info btn-block  mr-3" @onclick="@(() => Search(term))">
+                                <i class="flaticon2-search"></i>Buscar
+                            </button>
+                        </div>
+                    </div>
+                </EditForm>*@
+            <div class="card rounded border p-10">
+                <div class="table-responsive">
+                    <table id="table-data-aspnetusers" class="table table-striped gy-7 gs-7">
+                        <thead>
+                            <tr class="fw-bold fs-6 text-gray-800">
+                                <th>#</th>
+                                <th>Id</th>
+                                <th>Email</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var aspnetuser in aspnetusers)
+                            {
+                                <tr>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <button type="button"
+                                                    class="btn btn-light-primary btn-active-primary"
+                                                    title="Ver/Asignar Roles"
+                                                    @onclick="@(() => VerRoles(@aspnetuser))">
+                                                <i class="bi bi-eye fs-1"></i>Ver/Asignar Roles
+                                            </button>
+                                            <button type="button"
+                                                    class="btn btn-light-warning btn-active-warning"
+                                                    title="Ver/Asignar Oficinas"
+                                                    @onclick="@(() => VerOficinas(@aspnetuser))">
+                                                <i class="bi bi-eye fs-1"></i>Ver/Asignar Oficinas
+                                            </button>
+                                        </div>
+                                    </td>
+                                    <td>@aspnetuser.Id</td>
+                                    <td>@aspnetuser.Email</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+    </Authorized>
+    <NotAuthorized>
+        <p>&nbsp;</p>
+    </NotAuthorized>
+</AuthorizeView>
+<br />
+<br />
+<AuthorizeView>
+    <Authorized>
+        <section class="mb-4">
+            <h1 class="mb-4"><u>Hola @context.User.Identity.Name, éstos son sus Claims:</u></h1>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th><b>Key</b></th>
+                        <th><b>Value</b></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var claim in context.User.Claims)
+                    {
+                        <tr>
+                            <td>@claim.Type</td>
+                            <td>@claim.Value</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </section>
+    </Authorized>
+</AuthorizeView>
+
+@code
+{
+    private MAspNetUsers[] aspnetusers;
+    private MAspNetRoles[] Roles;
+    private MAspNetRoles[] UserRoles;
+    private MAspNetRoles[] NotUserRoles;
+    private MOficina[] Oficinas;
+    private MOficina[] UserOficinas;
+    private MOficina[] NotUserOficinas;
+    private string term = new string("");
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            await CargaDatos();
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            exception.Redirect();
+        }
+    }
+
+    protected async Task CargaDatos()
+    {
+        aspnetusers = await Http.GetFromJsonAsync<MAspNetUsers[]>("api/User/GetAspNetUsers");
+        Roles = await Http.GetFromJsonAsync<MAspNetRoles[]>("api/User/GetAspNetRoles");
+        Oficinas = await Http.GetFromJsonAsync<MOficina[]>("api/Global/GetOficinas");
+        if (aspnetusers != null)
+        {
+            await CargarDataTable();
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await jsRuntime.InvokeVoidAsync("ListaAspNetUsers");
+    }
+
+    protected async Task QuitarDataTable()
+    {
+        await jsRuntime.InvokeVoidAsync("QuitarDataTable", "table-data-aspnetusers");
+    }
+    protected async Task CargarDataTable()
+    {
+        await jsRuntime.InvokeVoidAsync("CargarDataTable", "table-data-aspnetusers");
+    }
+
+    //private async Task Search(string term)
+    //{
+    //    if (term.Length > 1)
+    //    {
+    //        aspnetusers = await Http.GetFromJsonAsync<MAspNetUsers[]>("api/User/SearchUsers/" + term);
+    //        if (aspnetusers.Length == 0)
+    //        {
+    //            toastService.ShowError($"No se encontró su búsqueda, intentelo nuevamente", "UPS!");
+    //        }
+    //    }
+
+    //    if (string.IsNullOrEmpty(term))
+    //    {
+    //        await CargaDatos();
+    //    }
+    //}
+
+    protected async Task VerOficinas(MAspNetUsers Usuario)
+    {
+        UserOficinas = await Http.GetFromJsonAsync<MOficina[]>("api/Global/GetUserOficinas/" + Usuario.Id);
+        NotUserOficinas = await Http.GetFromJsonAsync<MOficina[]>("api/Global/GetNotUserOficinas/" + Usuario.Id);
+
+        foreach (var oficina in Oficinas)
+        {
+            if (Array.Exists(UserOficinas, element => element.Id_Oficina == oficina.Id_Oficina))
+            {
+                oficina.Status = true;
+            }
+            else
+            {
+                oficina.Status = false;
+            }
+        }
+        foreach (var userOficina in UserOficinas)
+        {
+            userOficina.Status = true;
+        }
+
+        var parameters = new ModalParameters();
+        parameters.Add(nameof(Global.UserOficinas.oficinas), Oficinas);
+        parameters.Add(nameof(Global.UserOficinas.userOficinas), UserOficinas);
+        parameters.Add(nameof(Global.UserOficinas.notUserOficinas), NotUserOficinas);
+        parameters.Add(nameof(Global.UserOficinas.aspnetuser), Usuario);
+        var usuarioModal = Modal.Show<Global.UserOficinas>("Oficinas de Usuario", parameters);
+        var result = await usuarioModal.Result;
+        if (result.Cancelled)
+        {
+            Console.WriteLine("Modal was cancelled");
+        }
+        else
+        {
+            await CargaDatos();
+        }
+    }
+
+    protected async Task VerRoles(MAspNetUsers Usuario)
+    {
+        UserRoles = await Http.GetFromJsonAsync<MAspNetRoles[]>("api/User/GetUserRoles/" + Usuario.Id);
+        NotUserRoles = await Http.GetFromJsonAsync<MAspNetRoles[]>("api/User/GetNotUserRoles/" + Usuario.Id);
+
+        foreach (var rol in Roles)
+        {
+            if (Array.Exists(UserRoles, element => element.RoleId == rol.RoleId))
+            {
+                rol.Status = true;
+            }
+            else
+            {
+                rol.Status = false;
+            }
+        }
+        foreach (var userRol in UserRoles)
+        {
+            userRol.Status = true;
+        }
+        var parameters = new ModalParameters();
+        parameters.Add(nameof(Usuarios.AspNetUserRoles.roles), Roles);
+        parameters.Add(nameof(Usuarios.AspNetUserRoles.userRoles), UserRoles);
+        parameters.Add(nameof(Usuarios.AspNetUserRoles.notUserRoles), NotUserRoles);
+        parameters.Add(nameof(Usuarios.AspNetUserRoles.aspnetuser), Usuario);
+        var usuarioModal = Modal.Show<Usuarios.AspNetUserRoles>("Roles de Usuario", parameters);
+        var result = await usuarioModal.Result;
+        if (result.Cancelled)
+        {
+            Console.WriteLine("Modal was cancelled");
+        }
+        else
+        {
+            await CargaDatos();
+        }
+    }
+}

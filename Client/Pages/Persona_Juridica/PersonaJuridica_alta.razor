@@ -1,0 +1,243 @@
+﻿@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject HttpClient Http
+@using AutenticacionBlazor.Shared
+@using AutenticacionBlazor.Shared.Modelos
+@using AutenticacionBlazor.Shared.Modelos.Personas.Juridica
+@using AutenticacionBlazor.Shared.Modelos.Global
+@using AutenticacionBlazor.Shared.Modelos.Personas.Fisica
+@inject NavigationManager NavigationManager
+@inject IModalService Modal
+@inject SignOutSessionStateManager SignOutManage
+@using Microsoft.AspNetCore.Http
+@inject Blazored.LocalStorage.ISyncLocalStorageService localStorage
+@using Newtonsoft.Json
+@using System.IO
+@inject IJSRuntime JSRuntime
+
+@if (persona_juridica != null && paises != null && tipoSociedad != null)
+{
+    <div class="modal-backdrop fade show"></div>
+    <div class="modal fade show d-block" style="pointer-events: none;" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable" role="document">
+            <EditForm Model=@persona_juridica OnValidSubmit=@FormSubmitted class="form w-100" id="CC">
+                <div class="modal-content border-primary">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="staticBackdropLabel">Alta Persona Jurídica</h5>
+                        <button type="button" class="btn-close" @onclick="Cancel" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body" style="max-height: 75vh; overflow-y: auto;">
+                        <DataAnnotationsValidator />
+                        <div class="form-group row mb-5">
+                            <div class="col-lg-6 mb-5 mb-lg-0">
+                                <label class="form-label fw-bolder text-gray-900 fs-6">Nombre de Fantasía</label>
+                                <input @bind="@persona_juridica.Nombre_fantasia" class="form-control" placeholder="Nombre de Fantasia..." />
+                                <ValidationMessage For="@(() => persona_juridica.Nombre_fantasia)" />
+                            </div>
+                            <div class="col-lg-6">
+                                <label class="form-label fw-bolder text-gray-900 fs-6">Nombre legal</label>
+                                <input @bind="@persona_juridica.Nombre_legal" class="form-control" placeholder="Nombre Legal..." />
+                                <ValidationMessage For="@(() => persona_juridica.Nombre_legal)" />
+                            </div>                            
+                        </div>
+
+                        <div class="form-group row mb-5">
+                            <div class="col-lg-6 mb-5 mb-lg-0">
+                                <label class="form-label fw-bolder text-gray-900 fs-6">Cuit</label>
+                                <input @bind="@persona_juridica.Cuit" class="form-control" placeholder="00-00000000-0" />
+                                <ValidationMessage For="@(() => persona_juridica.Cuit)" />
+                            </div>
+                            <div class="col-lg-6">
+                                <label class="form-label fw-bolder text-gray-900 fs-6">Rol</label>
+                                <input @bind="@persona_juridica.Rol" class="form-control" placeholder="Rol..." />
+                                <ValidationMessage For="@(() => persona_juridica.Rol)" />
+                            </div>
+                        </div>
+
+                        <div class="form-group row mb-5">
+                            <div class="col-lg-6 mb-5 mb-lg-0">
+                                <label class="form-label fw-bolder text-gray-900 fs-6">Tipo de sociedad</label>
+                                <select id="tipo_sociedad"
+                                        class="form-control selectpicker"
+                                        data-size="7"
+                                        data-live-search="true"
+                                        data-container="body"
+                                        @onchange="SeleccionTipoSociedad">
+                                    <option value="0" selected disabled>Seleccione un tipo de sociedad</option>
+                                    @if (tipoSociedad != null)
+                                    {
+                                        @foreach (var x in tipoSociedad)
+                                        {
+                                            <option value="@x.Id">@x.Tipo_sociedad</option>
+                                        }
+                                    }
+                                </select>
+                                <ValidationMessage For="@(() => persona_juridica.Id_tipo_sociedad)" />
+                            </div>
+                            <div class="col-lg-6">
+                                <label class="form-label fw-bolder text-gray-900 fs-6">País</label>
+                                <select id="pais"
+                                        class="form-control selectpicker"
+                                        data-size="7"
+                                        data-live-search="true"
+                                        data-container="body"
+                                        @onchange="SeleccionDePais">
+                                    <option value="0" selected disabled>Seleccione un pais</option>
+                                    @if (paises != null)
+                                    {
+                                        @foreach (var x in paises)
+                                        {
+                                            <option value="@x.Id">@x.Pais</option>
+                                        }
+                                    }
+                                </select>
+                                <ValidationMessage For="@(() => persona_juridica.Id_pais)" />
+                            </div>                            
+                        </div>
+
+                        <div class="form-group row mb-5">
+                            <div class="col-lg-6 mb-5 mb-lg-0">
+                                <label class="form-label fw-bolder text-gray-900 fs-6">Pdf Dni de asociados</label>
+                                <InputFile OnChange="OnInputFileChange" class="form-control" />
+                            </div>
+                            <div class="col-lg-6">
+                                <label class="form-label fw-bolder text-gray-900 fs-6">Pdf Habilitación:</label>
+                                <InputFile OnChange="OnInputFileChange" class="form-control" />
+                            </div>
+                        </div>
+                        @*<ValidationSummary />*@
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-success mr-2">Guardar</button>
+                        <button type="reset" class="btn btn-secondary" @onclick="Cancel">Cancelar</button>
+                    </div>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+}
+
+@code
+{
+    [CascadingParameter] BlazoredModalInstance ModalInstance { get; set; }
+    private MRespuestaBoolMensaje resultado = new MRespuestaBoolMensaje();
+    private MPersonaFisicaGet persona_fisica;
+    private MPersonaJuridicaInsert persona_juridica = new MPersonaJuridicaInsert();
+    private List<MListaPaises> paises;
+    private List<MListaTipoSociedad> tipoSociedad;
+    string Message = "No file(s) selected";
+    IReadOnlyList<IBrowserFile> selectedFiles;
+    private List<UploadedFile> parts = new List<UploadedFile>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            await CargaDatos();
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            exception.Redirect();
+        }
+    }
+
+    private void OnInputFileChange(InputFileChangeEventArgs e)
+    {
+        selectedFiles = e.GetMultipleFiles();
+        Message = $"{selectedFiles.Count} file(s) selected";
+        this.StateHasChanged();
+    }
+
+    protected async Task CargaDatos()
+    {
+        tipoSociedad = await Http.GetFromJsonAsync<List<MListaTipoSociedad>>("api/global/Listadesociedades");
+        paises = await Http.GetFromJsonAsync<List<MListaPaises>>("api/Global/ListaDePaises");
+        //Console.WriteLine($"pasies------------ {JsonConvert.SerializeObject(paises)}");
+        persona_fisica = await Http.GetFromJsonAsync<MPersonaFisicaGet>("api/PersonaFisica/Informacion");
+        persona_juridica.Uid_persona_fisica = persona_fisica.Uid_persona;
+        persona_juridica.Estado = 1;
+        if (tipoSociedad != null && paises != null)
+        {
+            await JSRuntime.InvokeVoidAsync("SwalCerrar", "2");
+        }
+    }
+
+    protected void SeleccionTipoSociedad(ChangeEventArgs e)
+    {
+        var idTipoSociedad = int.Parse(e.Value.ToString());
+        persona_juridica.Id_tipo_sociedad = idTipoSociedad;
+    }
+
+    protected void SeleccionDePais(ChangeEventArgs e)
+    {
+        var idPais = int.Parse(e.Value.ToString());
+        persona_juridica.Id_pais = idPais;
+    }
+
+    protected async Task AltaPersonaJuridica()
+    {
+        if (selectedFiles != null)
+        {
+            foreach (var file in selectedFiles)
+            {
+                Stream stream = file.OpenReadStream();
+                MemoryStream ms = new MemoryStream();
+                await stream.CopyToAsync(ms);
+                stream.Close();
+                string _extension = Path.GetExtension(file.Name);
+                parts.Add(new UploadedFile() { FileName = file.Name, FileType = file.ContentType, FileContent = ms.ToArray() });
+                ms.Close();
+            }
+
+            persona_juridica.Archivos = parts;
+        }
+
+        persona_juridica.Estado = 2;
+
+        await JSRuntime.InvokeVoidAsync("SwalLoading", "Agregando persona juridica...");
+
+        using var response = await Http.PostAsJsonAsync("api/PersonaJuridica/Agregar", persona_juridica);
+        resultado = await response.Content.ReadFromJsonAsync<MRespuestaBoolMensaje>();
+        if (resultado.resultado == true)
+        {
+            var Confirm1 = await JSRuntime.InvokeAsync<bool>("SwalNormal", "Correcto!", "Se agrego correctamente!", "success", false);
+            if (Confirm1)
+            {
+                await ModalInstance.CloseAsync(ModalResult.Ok<MPersonaJuridicaInsert>(persona_juridica));
+            }
+        }
+        else
+        {
+            var Confirm2 = await JSRuntime.InvokeAsync<bool>("SwalNormal", "Oops...", resultado.mensaje, "error", false);
+            if (Confirm2)
+            {
+                Cancel();
+            }
+        }
+
+    }
+
+    protected async Task FormSubmitted()
+    {
+        try
+        {
+            await AltaPersonaJuridica();
+        }
+        catch
+        {
+            var Confirm2 = await JSRuntime.InvokeAsync<bool>("SwalNormal", "Oops...", "No se pudo dar de alta a la persona.", "error", false);
+            if (Confirm2)
+            {
+                Cancel();
+            }
+        }
+    }
+
+    void Cancel()
+    {
+        ModalInstance.CancelAsync();
+
+    }
+
+}

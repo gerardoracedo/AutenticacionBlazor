@@ -1,0 +1,542 @@
+﻿create extension dblink;
+DROP  extension dblink;
+__________________________________________________________________________________________
+CREATE OR REPLACE FUNCTION personas."Delete_telefono"(id integer)
+ RETURNS TABLE(resultado boolean, mensaje text)
+ LANGUAGE plpgsql
+AS $function$	
+   DECLARE
+		_Id int4;
+	BEGIN
+	
+		IF 
+		
+		EXISTS(SELECT 1 FROM personas."Persona_telefonos" AS T 
+		WHERE T."Id" = id AND T."Estado" = 1)
+	
+		THEN		
+		-- Deshabilito el registro actual cambiando el estado
+		UPDATE personas."Persona_telefonos" SET "Estado" = 0 
+										    WHERE "Id" = id AND "Estado" = 1;
+				
+			resultado = true;
+			mensaje = 'Se borró correctamente el teléfono';
+		ELSE
+			resultado = false;
+			mensaje = 'No se pudo borrar el teléfono';
+		END IF;
+	
+	RETURN QUERY
+	SELECT resultado,CAST ( mensaje AS text );
+	END;
+$function$
+;
+______________________________________________________________________________________________________
+CREATE OR REPLACE FUNCTION personas."Get_estados_civiles"()
+ RETURNS TABLE(id smallint, estado smallint, estado_civil character varying)
+ LANGUAGE plpgsql
+AS $function$
+	BEGIN	
+	RETURN QUERY 
+
+		SELECT * FROM personas."Persona_estado_civil" AS PEG WHERE PEG."Estado" = 1;		
+
+	END;
+$function$
+;
+______________________________________________________________________________________________________
+CREATE OR REPLACE FUNCTION personas."Get_generos"()
+ RETURNS TABLE(id smallint, estado smallint, descripcion character varying)
+ LANGUAGE plpgsql
+AS $function$
+	BEGIN	
+	RETURN QUERY 
+
+		SELECT * FROM personas."Persona_generos" AS PG WHERE PG."Estado" = 1;		
+
+	END;
+$function$
+;
+______________________________________________________________________________________________________
+CREATE OR REPLACE FUNCTION personas."Get_mis_direcciones"(uidpersona integer)
+ RETURNS TABLE(id integer, uid_persona integer, pais character varying, provincia character varying, localidad character varying, codigo_postal character varying, nombre_calle character varying, numero character varying, piso character varying, departamento character varying, sector character varying, manzana character varying, lote character varying, descripcion text)
+ LANGUAGE plpgsql
+AS $function$
+	BEGIN
+	RETURN QUERY
+	
+		SELECT D."Id", D."Uid_persona", PA."Pais", PR."Provincia", L."Localidad", D."Codigo_postal",
+		       D."Nombre_calle", D."Numero", D."Piso", D."Departamento", D."Sector", D."Manzana",
+		       D."Lote", D."Descripcion" 
+		FROM personas."Persona_direcciones" AS D
+		JOIN global."Global_paises" AS PA
+		ON D."Id_pais" = PA."Id"
+		JOIN global."Global_provincias" AS PR
+		ON D."Id_provincia" = PR."Id"
+		JOIN global."Global_localidades" AS L
+		ON D."Id_localidad" = L."Id"		
+		WHERE D."Uid_persona" = uidpersona AND D."Estado" = 1;
+	
+	END;
+$function$
+;
+______________________________________________________________________________________________________
+CREATE OR REPLACE FUNCTION personas."Get_mis_mails"(uidpersona text)
+ RETURNS TABLE(id integer, descripcion character varying, email character varying)
+ LANGUAGE plpgsql
+AS $function$
+	declare
+		_uid integer;
+	BEGIN
+	
+		SELECT INTO _uid personas."Persona_identity"."Uid_persona" 
+		FROM personas."Persona_identity" 
+		WHERE personas."Persona_identity"."Id_identity" = uidpersona;
+	
+	RETURN QUERY
+	
+		SELECT M."Id", M."Descripcion", M."Email" 
+		FROM personas."Persona_mail" AS M 
+		WHERE M."Uid_persona" = _uid AND M."Estado" = 1;
+	
+	END;
+$function$
+;
+______________________________________________________________________________________________________
+CREATE OR REPLACE FUNCTION personas.Get_mails_by_uid(uid integer)
+ RETURNS TABLE(id integer, descripcion character varying, email character varying)
+ LANGUAGE plpgsql
+AS $function$
+	BEGIN
+		
+	RETURN QUERY
+	
+		SELECT M."Id", M."Descripcion", M."Email" 
+		FROM personas."Persona_mail" AS M 
+		WHERE M."Uid_persona" = uid AND M."Estado" = 1;
+	
+	END;
+$function$
+;
+______________________________________________________________________________________________________
+CREATE OR REPLACE FUNCTION personas."Get_mis_telefonos"(ididentity text)
+ RETURNS TABLE(id integer, descripcion character varying, telefono character varying)
+ LANGUAGE plpgsql
+AS $function$
+	declare
+		_uid integer;
+	BEGIN
+
+		SELECT INTO _uid personas."Persona_identity"."Uid_persona" 
+		FROM personas."Persona_identity" 
+		WHERE personas."Persona_identity"."Id_identity" = ididentity;
+		
+	RETURN QUERY
+	
+		SELECT T."Id", T."Descripcion", T."Telefono" 
+		FROM personas."Persona_telefonos" AS T 
+		WHERE T."Uid_persona" = _uid AND T."Estado" = 1;
+	
+	END;
+$function$
+;
+______________________________________________________________________________________________________
+CREATE OR REPLACE FUNCTION personas."Get_persona_fisica"(uidpersona integer)
+ RETURNS TABLE(id integer, estado smallint, uid_persona integer, apellido character varying, nombre character varying, dni character varying, cuit character varying, fecha_nacimiento date, id_genero smallint, id_pais integer, id_estado_civil smallint, id_tipo_dni smallint, genero character varying, pais character varying, estado_civil character varying, tipo_dni character varying)
+ LANGUAGE plpgsql
+AS $function$
+	BEGIN	
+	RETURN QUERY 
+
+		SELECT PF."Id", PF."Estado", PF."Uid_persona", PF."Apellido", PF."Nombre", PF."Dni", PF."Cuit",
+		PF."Fecha_nacimiento", PF."Id_genero", PF."Id_pais", PF."Id_estado_civil", PF."Id_tipo_dni", 
+		PG."Genero", PA."Pais", PEC."Estado_civil", PTD."Tipo_dni" 
+		FROM "personas"."Persona_fisica" AS PF 
+		JOIN "personas"."Persona_estado_civil" AS PEC 
+		ON PF."Id_estado_civil" = PEC."Id"
+		JOIN "personas"."Persona_tipos_dni" AS PTD 
+		ON PF."Id_tipo_dni" = PTD."Id"
+		JOIN "personas"."Persona_generos" AS PG 
+		ON PF."Id_genero" = PG."Id"
+		JOIN "global"."Global_paises" AS PA 
+		ON PF."Id_pais" = PA."Id"
+		WHERE PF."Uid_persona" = uidpersona AND PF."Estado" = 1 AND PEC."Estado" = 1 AND PTD."Estado" = 1 AND PG."Estado" = 1;			
+
+	END;
+$function$
+;
+______________________________________________________________________________________________________
+CREATE OR REPLACE FUNCTION personas."Get_personas_fisicas"()
+ RETURNS TABLE(id integer, estado smallint, uid_persona integer, apellido character varying, nombre character varying, dni character varying, cuit character varying, fecha_nacimiento date, id_genero smallint, id_pais integer, id_estado_civil smallint, id_tipo_dni smallint, genero character varying, pais character varying, estado_civil character varying, tipo_dni character varying)
+ LANGUAGE plpgsql
+AS $function$
+	BEGIN	
+	RETURN QUERY 
+
+		SELECT PF."Id", PF."Estado", PF."Uid_persona", PF."Apellido", PF."Nombre", PF."Dni", PF."Cuit",
+		PF."Fecha_nacimiento", PF."Id_genero", PF."Id_pais", PF."Id_estado_civil", PF."Id_tipo_dni", 
+		PG."Genero", PA."Pais", PEC."Estado_civil", PTD."Tipo_dni" 
+		FROM "personas"."Persona_fisica" AS PF 
+		JOIN "personas"."Persona_estado_civil" AS PEC 
+		ON PF."Id_estado_civil" = PEC."Id"
+		JOIN "personas"."Persona_tipos_dni" AS PTD 
+		ON PF."Id_tipo_dni" = PTD."Id"
+		JOIN "personas"."Persona_generos" AS PG 
+		ON PF."Id_genero" = PG."Id"
+		JOIN "global"."Global_paises" AS PA 
+		ON PF."Id_pais" = PA."Id"
+		WHERE PF."Estado" = 1 AND PEC."Estado" = 1 AND PTD."Estado" = 1 AND PG."Estado" = 1;			
+
+	END;
+$function$
+;
+______________________________________________________________________________________________________
+CREATE OR REPLACE FUNCTION personas."Get_persona_identity"(ididentity text)
+ RETURNS TABLE(resultado boolean, mensaje text)
+ LANGUAGE plpgsql
+AS $function$
+	DECLARE
+		_Bol bool;
+		_Mensaje text;
+	BEGIN
+	
+		IF EXISTS(SELECT 1 FROM personas."Persona_identity" AS P 
+				  WHERE P."Id_identity" = ididentity) THEN
+		--Existe la persona identity.
+			_Bol = true;
+			_Mensaje = 'Ok.';		
+		ELSE
+		--No Existe la persona identity, devolver false y mensaje de aviso
+			_Bol = false;
+			_Mensaje = 'Debe llenar los datos para poder continuar.';
+		END IF;
+		
+	RETURN QUERY
+		
+		-- Resultado final
+		SELECT _Bol,CAST ( _Mensaje AS text );
+		
+	END;
+$function$
+;
+______________________________________________________________________________________________________
+CREATE OR REPLACE FUNCTION personas."Get_personas_fisicas"()
+ RETURNS TABLE(id integer, estado smallint, uid_persona integer, apellido character varying, nombre character varying, dni character varying, cuit character varying, fecha_nacimiento date, id_genero smallint, id_pais integer, id_estado_civil smallint, id_tipo_dni smallint, genero character varying, pais character varying, estado_civil character varying, tipo_dni character varying)
+ LANGUAGE plpgsql
+AS $function$
+	BEGIN	
+	RETURN QUERY 
+
+		SELECT PF."Id", PF."Estado", PF."Uid_persona", PF."Apellido", PF."Nombre", PF."Dni", PF."Cuit",
+		PF."Fecha_nacimiento", PF."Id_genero", PF."Id_pais", PF."Id_estado_civil", PF."Id_tipo_dni", 
+		PG."Genero", PA."Pais", PEC."Estado_civil", PTD."Tipo_dni" 
+		FROM "personas"."Persona_fisica" AS PF 
+		JOIN "personas"."Persona_estado_civil" AS PEC 
+		ON PF."Id_estado_civil" = PEC."Id"
+		JOIN "personas"."Persona_tipos_dni" AS PTD 
+		ON PF."Id_tipo_dni" = PTD."Id"
+		JOIN "personas"."Persona_generos" AS PG 
+		ON PF."Id_genero" = PG."Id"
+		JOIN "global"."Global_paises" AS PA 
+		ON PF."Id_pais" = PA."Id"
+		WHERE PF."Estado" = 1 AND PEC."Estado" = 1 AND PTD."Estado" = 1 AND PG."Estado" = 1;			
+
+	END;
+$function$
+;
+______________________________________________________________________________________________________
+CREATE OR REPLACE FUNCTION personas."Get_telefono"(idtel integer)
+ RETURNS TABLE(id integer, descripcion character varying, telefono character varying, uid integer)
+ LANGUAGE plpgsql
+AS $function$
+	BEGIN
+	RETURN QUERY
+	
+		SELECT T."Id", T."Descripcion", T."Telefono", T."Uid_persona" 
+		FROM personas."Persona_telefonos" AS T 
+		WHERE T."Id" = idtel AND T."Estado" = 1;
+	
+	END;
+$function$
+;
+______________________________________________________________________________________________________
+CREATE OR REPLACE FUNCTION personas."Get_telefonos_by_uid"(uid integer)
+ RETURNS TABLE(id integer, descripcion character varying, telefono character varying)
+ LANGUAGE plpgsql
+AS $function$
+	BEGIN
+		
+	RETURN QUERY
+	
+		SELECT T."Id", T."Descripcion", T."Telefono" 
+		FROM personas."Persona_telefonos" AS T 
+		WHERE T."Uid_persona" = uid AND T."Estado" = 1;
+	
+	END;
+$function$
+;
+______________________________________________________________________________________________________
+CREATE OR REPLACE FUNCTION personas."Get_tipos_dni"()
+ RETURNS TABLE(id smallint, estado smallint, tipo_dni character varying)
+ LANGUAGE plpgsql
+AS $function$
+	BEGIN	
+	RETURN QUERY 
+
+		SELECT * FROM personas."Persona_tipos_dni" AS PTD WHERE PTD."Estado" = 1;		
+
+	END;
+$function$
+;
+______________________________________________________________________________________________________
+CREATE OR REPLACE FUNCTION personas."Get_uid_persona"(id_identity text)
+ RETURNS TABLE(uid_persona integer)
+ LANGUAGE plpgsql
+AS $function$
+	BEGIN	
+	
+	RETURN QUERY
+	
+		-- Resultado final
+		SELECT "Uid_persona" FROM personas."Persona_identity" AS P WHERE P."Id_identity" = id_identity;
+		
+	END;
+$function$
+;
+______________________________________________________________________________________________________
+CREATE OR REPLACE FUNCTION personas."Insert_telefono"(uid_persona integer, descripcion text, telefono text, usuariograba text)
+ RETURNS TABLE(resultado boolean, mensaje text)
+ LANGUAGE plpgsql
+AS $function$	
+   DECLARE
+		_Id int4;
+	BEGIN
+	
+		IF EXISTS(SELECT 1 FROM personas."Persona_telefonos" AS T 
+			  WHERE T."Telefono" = telefono AND T."Estado" = 1) THEN
+	    --Existe lel teléfono no se puede agregar
+			resultado = false;
+			mensaje = 'Ya existe un teléfono registrado con ese número.';		
+		ELSE
+		--No Existe el teléfono aún		
+			INSERT INTO personas."Persona_telefonos"("Estado", "Uid_persona", "Descripcion", "Telefono", "Usuario_graba") 
+			VALUES (1, uid_persona, descripcion, telefono, usuariograba)
+			RETURNING "Id" INTO _Id;	
+				-- Verifico si se agregó
+			IF _Id IS NOT NULL THEN	
+				resultado = true;
+				mensaje = CONCAT('Se agregó el teléfono: ',telefono);
+			ELSE
+				resultado = false;
+				mensaje = CONCAT('No se pudo agregar el teléfono: ',telefono);
+			END IF;
+		END IF;
+	
+	RETURN QUERY
+	SELECT resultado,CAST ( mensaje AS text );
+	END;
+$function$
+;
+______________________________________________________________________________________________________
+CREATE OR REPLACE FUNCTION personas."Update_persona_fisica"(
+uid integer, 
+apellido text,
+nombre text,
+dni text, 
+cuit text, 
+fecha_nacimiento date, 
+id_genero smallint, 
+id_pais integer, 
+id_estado_civil smallint, 
+id_tipo_dni smallint)
+ RETURNS TABLE(resultado boolean, mensaje text)
+ LANGUAGE plpgsql
+AS $function$
+	DECLARE
+		_Id int4;
+		_Fecha_nacimiento date;
+	BEGIN	
+	/*===========================
+		- Para agregar la fecha de nacimiento en NULL enviar la fecha '1900-01-01'
+	===========================*/
+	
+	-- El update es deshabilitar el registro actual y agregar uno nuevo
+		
+	--- Verifico fecha de nacimiento
+	IF fecha_nacimiento = '1900-01-01' THEN
+		_Fecha_nacimiento = NULL;
+	ELSE
+		_Fecha_nacimiento = fecha_nacimiento;
+	END IF;
+		
+	-- Ahora agrego los nuevos datos de la persona
+	INSERT INTO personas."Persona_fisica"("Estado", "Uid_persona", "Apellido", "Nombre", "Dni", "Cuit", "Fecha_nacimiento", "Id_genero", "Id_pais", "Id_estado_civil", "Id_tipo_dni")
+	VALUES(99, uid, apellido, nombre, dni, cuit, _Fecha_nacimiento, id_genero, id_pais, id_estado_civil, id_tipo_dni) RETURNING "Id" INTO _Id;
+		
+	-- Verifico si se agrego a la persona con el "Id" del returning
+	IF _Id IS NOT NULL THEN
+		-- Deshabilito el registro actual cambiando el estado
+		UPDATE personas."Persona_fisica" SET "Estado" = 0 WHERE "Uid_persona" = uid AND "Estado" = 1;
+		
+		-- Habilito los nuevos datos cambiando el estado
+		UPDATE personas."Persona_fisica" SET "Estado" = 1 WHERE "Uid_persona" = uid AND "Estado" = 99;
+		
+		resultado = true;
+		mensaje = CONCAT('Se actualizaron correctamente los datos para ', apellido, ' ', nombre);
+		
+	ELSE
+		-- No se actualizaron los datos de la persona
+		resultado = false;
+		mensaje = CONCAT('No se pudo actualizar los datos para ', apellido, ' ', nombre);
+		
+	END IF;
+	
+	RETURN QUERY
+		
+		-- Resultado final
+		SELECT resultado,CAST ( mensaje AS text );
+		
+	END;
+$function$
+;
+______________________________________________________________________________________________________
+CREATE OR REPLACE FUNCTION personas."Update_telefono"(uid_persona integer, id integer, descripcion text, telefono text, usuariograba text)
+ RETURNS TABLE(resultado boolean, mensaje text)
+ LANGUAGE plpgsql
+AS $function$	
+   DECLARE
+		_Id int4;
+	BEGIN
+		
+		IF EXISTS(SELECT 1 FROM personas."Persona_telefonos" AS T 
+			  WHERE T."Telefono" = telefono AND T."Estado" = 1 AND T."Id" <> id) THEN
+	    --Existe lel teléfono no se puede agregar
+			resultado = false;
+			mensaje = 'Ya existe un teléfono registrado con ese número.';		
+		ELSE
+		--No Existe el teléfono aún			
+	
+			INSERT INTO personas."Persona_telefonos"("Estado", "Uid_persona", "Descripcion", "Telefono", "Usuario_graba") 
+			VALUES (99, uid_persona, descripcion, telefono, usuariograba)
+			RETURNING "Id" INTO _Id;	
+				-- Verifico si se agregó
+			IF _Id IS NOT NULL THEN
+			
+			-- Deshabilito el registro actual cambiando el estado
+			UPDATE personas."Persona_telefonos" SET "Estado" = 0 
+											    WHERE "Uid_persona" = uid_persona AND "Estado" = 1 AND "Id" = id;
+			
+			-- Habilito los nuevos datos cambiando el estado
+			UPDATE personas."Persona_telefonos" SET "Estado" = 1 
+											    WHERE "Uid_persona" = uid_persona AND "Estado" = 99 AND "Id" = _Id;		
+			
+				resultado = true;
+				mensaje = 'Se modificó correctamente el teléfono';
+			ELSE
+				resultado = false;
+				mensaje = 'No se pudo modificar el teléfono';
+			END IF;
+		
+		END IF;
+	
+	RETURN QUERY
+	SELECT resultado,CAST ( mensaje AS text );
+	END;
+$function$
+;
+______________________________________________________________________________________________________
+CREATE OR REPLACE FUNCTION personas."Insert_mail"(uid_persona integer, descripcion text, email text, usuariograba text)
+ RETURNS TABLE(resultado boolean, mensaje text)
+ LANGUAGE plpgsql
+AS $function$	
+   DECLARE
+		_Id int4;
+		con TEXT ='dbname=postgres user=postgres password=Hugoreputo1!';
+		select1 TEXT = 'SELECT "AspNetUsers"."UserName" FROM public."AspNetUsers"'; 
+BEGIN
+		
+		IF EXISTS(SELECT 1 FROM personas."Persona_mail" AS M 
+			  WHERE M."Email" = email AND M."Estado" = 1) THEN
+	    --Existe lel mail no se puede agregar
+			resultado = false;
+			mensaje = 'Ya existe un mail registrado.';		
+		ELSE 
+			IF EXISTS(SELECT * FROM personas.dblink(con,
+			select1) as usuario(UserName varchar(256)) WHERE usuario.UserName = email)
+					THEN
+		    --Existe lel mail no se puede agregar
+				resultado = false;
+				mensaje = 'Ya existe un mail registrado.';		
+			ELSE
+			--No Existe el mail aún				
+				INSERT INTO personas."Persona_mail"("Estado", "Uid_persona", "Descripcion", "Email", "Usuario_graba") 
+				VALUES (1, uid_persona, descripcion, email, usuariograba)
+				RETURNING "Id" INTO _Id;	
+					-- Verifico si se agregó
+				IF _Id IS NOT NULL THEN
+					resultado = true;
+					mensaje = CONCAT('Se agrego el mail: ',email);
+				ELSE
+					resultado = false;
+					mensaje = CONCAT('No se pudo agregar el mail: ',email);
+				END IF;
+			END IF;	
+		END IF;
+	RETURN QUERY
+	SELECT resultado,CAST ( mensaje AS text );
+	END;
+$function$
+;
+______________________________________________________________________________________________________
+CREATE OR REPLACE FUNCTION personas."Update_mail"(uid_persona integer, id integer, descripcion text, email text, usuariograba text)
+ RETURNS TABLE(resultado boolean, mensaje text)
+ LANGUAGE plpgsql
+AS $function$	
+   DECLARE
+		_Id int4;
+		con TEXT ='dbname=postgres user=postgres password=Hugoreputo1!';
+		select1 TEXT = 'SELECT "AspNetUsers"."UserName" FROM public."AspNetUsers"'; 
+	BEGIN
+	
+		IF EXISTS(SELECT 1 FROM personas."Persona_mail" AS M 
+			  WHERE M."Email" = email AND M."Estado" = 1 AND M."Id" <> id) THEN
+	    --Existe lel mail no se puede agregar
+			resultado = false;
+			mensaje = 'Ya existe un mail registrado.';		
+		ELSE
+			IF EXISTS(SELECT * FROM personas.dblink(con,
+			select1) as usuario(UserName varchar(256)) WHERE usuario.UserName = email)
+					THEN
+		    --Existe lel mail no se puede agregar
+				resultado = false;
+				mensaje = 'Ya existe un mail registrado.';	
+			else
+				
+				INSERT INTO personas."Persona_mail"("Estado", "Uid_persona", "Descripcion", "Email", "Usuario_graba") 
+				VALUES (99, uid_persona, descripcion, email, usuariograba)
+				RETURNING "Id" INTO _Id;	
+					-- Verifico si se agregó
+				IF _Id IS NOT NULL THEN
+				
+				-- Deshabilito el registro actual cambiando el estado
+				UPDATE personas."Persona_mail" SET "Estado" = 0 
+												    WHERE "Uid_persona" = uid_persona AND "Estado" = 1 AND "Id" = id;
+				
+				-- Habilito los nuevos datos cambiando el estado
+				UPDATE personas."Persona_mail" SET "Estado" = 1 
+												    WHERE "Uid_persona" = uid_persona AND "Estado" = 99 AND "Id" = _Id;		
+				
+					resultado = true;
+					mensaje = 'Se modificó correctamente el mail';
+				ELSE
+					resultado = false;
+					mensaje = 'No se pudo modificar el mail';
+				END IF;
+			
+		END IF;		
+	end if;
+	RETURN QUERY
+	SELECT resultado,CAST ( mensaje AS text );
+	END;
+$function$
+;

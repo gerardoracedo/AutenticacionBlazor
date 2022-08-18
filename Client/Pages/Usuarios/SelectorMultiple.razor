@@ -1,0 +1,70 @@
+﻿@using AutenticacionBlazor.Client.Helpers
+
+@if (cargando)
+{
+    <div class="row bg-light">
+        <div class="col-12">
+            <div class="bg-light spinner spinner-track spinner-primary spinner-lg mr-15" style="margin-left: 43%;"></div>
+        </div>
+    </div>
+    <br class="row bg-light" />
+    <div class="row bg-light">
+        <div class="col-12">
+            <p style="margin-left: 43%;"><b>Cargando...</b></p>
+        </div>
+    </div>
+}
+<div class="selector-multiple">
+    <ul class="selectable-ul">
+        @foreach (var item in NoSeleccionados)
+        {
+            <li @onclick="@(()=> Seleccionar(item))">@item.Valor</li>
+        }
+    </ul>
+    <div class="selector-multiple-botones">
+        <button class="btn btn-primary" @onclick="SeleccionarTodo">>></button>
+        <button class="btn btn-danger" @onclick="DeseleccionarTodo">@removerTodoTexto</button>
+    </div>
+    <ul class="selectable-ul2">
+        @foreach (var item in Seleccionados)
+        {
+            <li @onclick="@(()=> Deseleccionar(item))">@item.Valor</li>
+        }
+    </ul>
+</div>
+
+@code
+{
+    private bool cargando = false;
+    private string removerTodoTexto = "<<";
+    [Parameter] public List<MSelectorMultiple> NoSeleccionados { get; set; } = new List<MSelectorMultiple>();
+    [Parameter] public List<MSelectorMultiple> Seleccionados { get; set; } = new List<MSelectorMultiple>();
+
+    private void Seleccionar(MSelectorMultiple item)
+    {
+        NoSeleccionados.Remove(item);
+        Seleccionados.Add(item);
+    }
+
+    private void Deseleccionar(MSelectorMultiple item)
+    {
+        Seleccionados.Remove(item);
+        NoSeleccionados.Add(item);
+    }
+
+    private void SeleccionarTodo()
+    {
+        cargando = true;
+        Seleccionados.AddRange(NoSeleccionados);
+        NoSeleccionados.Clear();
+        cargando = false;
+    }
+
+    private void DeseleccionarTodo()
+    {
+        cargando = true;
+        NoSeleccionados.AddRange(Seleccionados);
+        Seleccionados.Clear();
+        cargando = false;
+    }
+}

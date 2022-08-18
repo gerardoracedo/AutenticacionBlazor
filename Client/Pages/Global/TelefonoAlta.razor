@@ -1,0 +1,126 @@
+﻿@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@inject HttpClient Http
+@attribute [Authorize(Roles = "admin, super, general")]
+@using AutenticacionBlazor.Shared.Modelos.Global
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IJSRuntime jsRuntime
+@inject Blazored.LocalStorage.ISyncLocalStorageService localStorage
+
+@if (telefono == null)
+{
+    <div class="row">
+        <div class="col-12">
+            <div class="spinner spinner-track spinner-primary spinner-lg mr-15" style="margin-left: 49%;"></div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="modal-backdrop fade show"></div>
+    <div class="modal fade show d-block" style="pointer-events: none;" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable modal-dialog-centered" role="document">
+            <EditForm Model=@telefono OnValidSubmit=@FormSubmitted class="form w-100" id="CC">
+                <div class="modal-content border-primary">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="staticBackdropLabel">@ModalInstance.Title</h5>
+                        <button type="button" class="btn-close" @onclick="Cancelar" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body" style="max-height: 75vh; overflow-y: auto;">
+                        <DataAnnotationsValidator />
+                        <div class="form-group row mb-5">
+                            <div class="col-lg-6 mb-5 mb-lg-0">
+                                <label class="form-label fw-bolder text-gray-900 fs-6">Teléfono</label>
+                                <input @bind="telefono.Telefono" class="form-control" placeholder="Ej: 381..." />
+                                <ValidationMessage For="@(() => telefono.Telefono)" />
+                            </div>
+                            <div class="col-lg-6">
+                                <label class="form-label fw-bolder text-gray-900 fs-6">Descripción</label>
+                                <input @bind="telefono.Descripcion" class="form-control" placeholder="Ej: móvil..." />
+                                <ValidationMessage For="@(() => telefono.Descripcion)" />
+                            </div>
+                        </div>
+                        @*<ValidationSummary />*@
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-success mr-2">Guardar</button>
+                        <button type="reset" class="btn btn-secondary" @onclick="Cancelar">Cancelar</button>
+                    </div>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+}
+
+@code
+{
+    [CascadingParameter] private Task<AuthenticationState> authenticationState { get; set; }
+    [CascadingParameter] BlazoredModalInstance ModalInstance { get; set; }
+    private MTelefono telefono = new MTelefono();
+    private MRespuestaBoolMensaje resultado = new MRespuestaBoolMensaje();
+    private string uidpf;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await jsRuntime.InvokeVoidAsync("SwalCerrar", "1");
+    }
+
+    protected async Task FormSubmitted()
+    {
+        try
+        {
+            await Alta();
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine("Exception TelefonoAlta: ", e);
+            var Confirm3 = await jsRuntime.InvokeAsync<bool>("SwalNormal", "Oops...", "No se pudo realizar la consulta.", "error", false);
+            if (Confirm3)
+            {
+                Cancelar();
+            }
+        }
+    }
+
+    protected async Task Alta()
+    {
+        await jsRuntime.InvokeVoidAsync("SwalLoading");
+
+        uidpf = localStorage.GetItem<string>("uidpf");
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        if (authState.User.IsInRole("EditarPersonaFisica") && uidpf != null)
+        {
+            telefono.Uid_persona = Int32.Parse(uidpf);
+            using var response2 = await Http.PostAsJsonAsync("api/Global/InsertTelefono2", telefono);
+            resultado = await response2.Content.ReadFromJsonAsync<MRespuestaBoolMensaje>();
+        }
+        else
+        {
+            using var response = await Http.PostAsJsonAsync("api/Global/InsertTelefono", telefono);
+            resultado = await response.Content.ReadFromJsonAsync<MRespuestaBoolMensaje>();
+        }
+
+        if (resultado.resultado == true)
+        {
+            var Confirm1 = await jsRuntime.InvokeAsync<bool>("SwalNormal", "Correcto!", resultado.mensaje, "success", false);
+            if (Confirm1)
+            {
+                await ModalInstance.CloseAsync(ModalResult.Ok<MTelefono>(telefono));
+            }
+        }
+        else
+        {
+            var Confirm2 = await jsRuntime.InvokeAsync<bool>("SwalNormal", "Oops...", resultado.mensaje, "error", false);
+            if (Confirm2)
+            {
+                Cancelar();
+            }
+        }
+    }
+
+    void Cancelar()
+    {
+        ModalInstance.CancelAsync();
+    }
+}

@@ -1,0 +1,41 @@
+﻿@page "/Comercio/Ddjj"
+@layout NuevoLayout
+@using Microsoft.AspNetCore.Authorization
+@using AutenticacionBlazor.Shared.Modelos.Rentas.Comercio
+@using AutenticacionBlazor.Shared.Modelos.Global
+@inject HttpClient Http
+@using System.Text.RegularExpressions
+@using System.ComponentModel.DataAnnotations
+@using AutenticacionBlazor.Shared.Modelos.Personas.Fisica
+@using AutenticacionBlazor.Shared.Modelos.Personas.Juridica
+@using Microsoft.AspNetCore.Components.Web.Virtualization
+@using System.Collections.Generic
+@using System.Globalization
+@inject NavigationManager NavigationManager
+
+<MudPaper Style="position:relative;" Class="pt-4 pb-5">
+    <MudText Typo="Typo.h4" Class="ma-4 ml-6">Declaracion jurada de Comercio</MudText>
+    <MudContainer>
+        <MudButton Variant="Variant.Filled" Size="Size.Large" Color="Color.Tertiary" OnClick="@(async () => Nuevaddjj())">
+            <MudText>Agregar ddjj</MudText>
+        </MudButton>
+        
+    </MudContainer>
+    <MudOverlay Visible="isVisible" DarkBackground="true" Absolute="true">
+        <MudProgressCircular Color="Color.Secondary" Indeterminate="true" />
+    </MudOverlay>
+</MudPaper>
+
+@code {
+    private bool isVisible = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        isVisible = false;
+    }
+    void Nuevaddjj()
+    {
+        NavigationManager.NavigateTo("/Comercio/Agregarddjj");
+    }
+
+}

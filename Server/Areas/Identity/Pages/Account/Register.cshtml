@@ -1,0 +1,106 @@
+﻿@page
+@model RegisterModel
+@{
+    ViewData["Title"] = "Registrarse";
+}
+<!--begin::Logo-->
+<a href="~/" class="text-center pt-2">
+    <img src="~/images/logo.png" class="max-h-105px" alt="" />
+</a>
+<!--end::Logo-->
+<!--begin::Aside body-->
+<div class="d-flex flex-column-fluid flex-column flex-center">
+    <div id="loginexterno" class="loginexterno mt-15" style="width:100%;">
+        <div class="text-center pb-8">
+            <h2 class="font-weight-bolder text-dark font-size-h2 font-size-h1-lg">Iniciar sesion</h2>
+        </div>
+        <br />
+        <form asp-route-returnUrl="@Model.ReturnUrl" method="post">
+            <h4>Crea una cuenta nueva.</h4>
+            <hr />
+            <div asp-validation-summary="All" class="text-danger"></div>
+            <div class="form-group">
+                <label class="font-size-h6 font-weight-bolder text-dark" asp-for="Input.Email"></label>
+                <input class="form-control form-control-solid h-auto py-7 px-6 rounded-lg" asp-for="Input.Email" />
+                <span asp-validation-for="Input.Email" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label class="font-size-h6 font-weight-bolder text-dark" asp-for="Input.Password"></label>
+                <input class="form-control form-control-solid h-auto py-7 px-6 rounded-lg" asp-for="Input.Password" />
+                <span asp-validation-for="Input.Password" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label class="font-size-h6 font-weight-bolder text-dark" asp-for="Input.ConfirmPassword"></label>
+                <input class="form-control form-control-solid h-auto py-7 px-6 rounded-lg" asp-for="Input.ConfirmPassword" />
+                <span asp-validation-for="Input.ConfirmPassword" class="text-danger"></span>
+            </div>
+            <div class="form-group d-flex flex-wrap flex-center pb-lg-0 pb-3">
+                <button type="submit" class="btn btn-info font-weight-bolder font-size-h6 btn-block">Registrar</button>
+            </div>
+            <div class="form-group d-flex flex-wrap flex-center pb-lg-0 pb-3">
+                <a href="~/" class="btn btn-dark font-weight-bolder font-size-h6 btn-block">Cancelar</a>
+            </div>
+
+        </form>
+    </div>
+</div>
+    <!--
+    <div class="row">
+        <div class="col-md-4">
+            <form asp-route-returnUrl="@Model.ReturnUrl" method="post">
+                <h4>Crea una cuenta nueva.</h4>
+                <hr />
+                <div asp-validation-summary="All" class="text-danger"></div>
+                <div class="form-group">
+                    <label asp-for="Input.Email"></label>
+                    <input asp-for="Input.Email" class="form-control" />
+                    <span asp-validation-for="Input.Email" class="text-danger"></span>
+                </div>
+                <div class="form-group">
+                    <label asp-for="Input.Password"></label>
+                    <input asp-for="Input.Password" class="form-control" />
+                    <span asp-validation-for="Input.Password" class="text-danger"></span>
+                </div>
+                <div class="form-group">
+                    <label asp-for="Input.ConfirmPassword"></label>
+                    <input asp-for="Input.ConfirmPassword" class="form-control" />
+                    <span asp-validation-for="Input.ConfirmPassword" class="text-danger"></span>
+                </div>
+                <button type="submit" class="btn btn-primary">Registrar</button>
+            </form>
+        </div>
+        <div class="col-md-6 col-md-offset-2">
+            <section>
+                <h4>Utilice otro servicio para registrarse.</h4>
+                <hr />
+                @{
+                    if ((Model.ExternalLogins?.Count ?? 0) == 0)
+                    {
+                        <div>
+                            <p>
+                                No hay servicios de autenticación externos configurados. Ver <a href="https://go.microsoft.com/fwlink/?LinkID=532715">este artículo</a>
+                                para obtener detalles sobre cómo configurar esta aplicación ASP.NET para admitir el inicio de sesión a través de servicios externos.
+                            </p>
+                        </div>
+                    }
+                    else
+                    {
+                        <form id="external-account" asp-page="./ExternalLogin" asp-route-returnUrl="@Model.ReturnUrl" method="post" class="form-horizontal">
+                            <div>
+                                <p>
+                                    @foreach (var provider in Model.ExternalLogins)
+                                    {
+                                        <button type="submit" class="btn btn-primary" name="provider" value="@provider.Name" title="Inicie sesión con su @provider.DisplayName account">@provider.DisplayName</button>
+                                    }
+                                </p>
+                            </div>
+                        </form>
+                    }
+                }
+            </section>
+        </div>
+    </div>
+    -->
+    @section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

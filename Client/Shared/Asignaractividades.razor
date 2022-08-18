@@ -1,0 +1,90 @@
+﻿@inject HttpClient Http
+@inject IJSRuntime JSRuntime
+@using AutenticacionBlazor.Shared.Modelos
+
+@if (rCuit == null)
+{
+    @*<p>Cargando ...</p>*@
+}
+else
+{
+    @if (Modal)
+    {
+        @*<div class="modal fade" id="AsignarActividadComercial" role="dialog" aria-labelledby="AsignarActividadComercialLabel" aria-hidden="true">
+                <div class="modal-dialog modal-lg" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="ModalEditarUsuarioLabel">Asignar actividades</h5>
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <i aria-hidden="true" class="ki ki-close"></i>
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                            @rCuit
+                            <br />
+                            @if (listaUsuarioss == null)
+                            {
+                                <text>Cargando...</text>
+                            }
+                            else
+                            {
+                                <RadzenDropDown
+                                    AllowClear="true"
+                                    AllowFiltering="true"
+                                    FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                    @bind-Value=@selectedString
+                                    Placeholder="Seleccione una actividad"
+                                    Data=@listaUsuarioss
+                                    TextProperty="UserName"
+                                    ValueProperty="Id"
+
+                                    Style="width:100%" class="form-control" />
+
+                            }
+                            Selected Country is: @selectedString
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-light-primary font-weight-bold" @onclick="@(() => Limpiar())" data-dismiss="modal">Cerrar</button>
+                        </div>
+                    </div>
+                </div>
+            </div>*@
+    }
+    else
+    {
+
+    }
+
+}
+
+@code {
+    [Parameter] public string rCuit { get; set; }
+    [Parameter] public bool Modal { get; set; } = false;
+    [Parameter] public int pId { get; set; }
+    private string selectedString { get; set; }
+    //private ListaUsuariosModelo[] listaUsuarioss;
+
+    protected override async Task OnInitializedAsync()
+    {
+        selectedString = null;
+        //listaUsuarioss = null;
+        //listaUsuarioss = await Http.GetFromJsonAsync<ListaUsuariosModelo[]>("api/ListaUsuarios/GetUsuarios");
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await JSRuntime.InvokeVoidAsync("CargaSelect2").AsTask();
+    }
+
+    void OnChange(object value, string name)
+    {
+        var str = value is IEnumerable<object> ? string.Join(", ", (IEnumerable<object>)value) : value;
+
+        Console.WriteLine($"{name} value changed to {str}");
+    }
+
+    public async Task Limpiar()
+    {
+        selectedString = null;
+        await JSRuntime.InvokeVoidAsync("LimpiarModal");
+    }
+}

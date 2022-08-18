@@ -1,0 +1,218 @@
+﻿@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@inject HttpClient Http
+@layout NoLayout
+@attribute [Authorize(Roles = "admin, general")]
+@using AutenticacionBlazor.Shared.Modelos.Personas.Juridica
+@using AutenticacionBlazor.Shared.Modelos.Global
+@inject NavigationManager NavigationManager
+@inject IModalService Modal
+@inject Blazored.LocalStorage.ISyncLocalStorageService localStorage
+@inject IJSRuntime jsRuntime
+
+@if (personaJuridicaUpdate != null && paises != null && sociedades != null)
+{
+    <div class="modal-backdrop fade show"></div>
+    <div class="modal fade show d-block" style="pointer-events: none;" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable" role="document">
+            <EditForm Model=@personaJuridicaUpdate OnValidSubmit=@FormSubmitted class="form w-100" id="CC">
+                <div class="modal-content border-primary">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="staticBackdropLabel">Editar Persona Jurídica</h5>
+                        <button type="button" class="btn-close" @onclick="Cancel" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body" style="max-height: 75vh; overflow-y: auto;">
+                        <DataAnnotationsValidator />
+                        <div class="form-group row mb-5">
+                            <div class="col-lg-6 mb-5 mb-lg-0">
+                                <label class="form-label fw-bolder text-gray-900 fs-6">Nombre de Fantasía</label>
+                                <input @bind="@personaJuridicaUpdate.Nombre_fantasia" class="form-control" placeholder="Nombre de Fantasia..." />
+                                <ValidationMessage For="@(() => personaJuridicaUpdate.Nombre_fantasia)" />
+                            </div>
+                            <div class="col-lg-6">
+                                <label class="form-label fw-bolder text-gray-900 fs-6">Nombre legal</label>
+                                <input @bind="@personaJuridicaUpdate.Nombre_legal" class="form-control" placeholder="Nombre Legal..." />
+                                <ValidationMessage For="@(() => personaJuridicaUpdate.Nombre_legal)" />
+                            </div>
+                        </div>
+
+                        <div class="form-group row mb-5">
+                            <div class="col-lg-6 mb-5 mb-lg-0">
+                                <label class="form-label fw-bolder text-gray-900 fs-6">Cuit</label>
+                                <input @bind="@personaJuridicaUpdate.Cuit" class="form-control" placeholder="00-00000000-0" />
+                                <ValidationMessage For="@(() => personaJuridicaUpdate.Cuit)" />
+                            </div>
+                            <div class="col-lg-6">
+                                <label class="form-label fw-bolder text-gray-900 fs-6">Rol</label>
+                                <input @bind="@personaJuridicaUpdate.Rol" class="form-control" placeholder="Rol..." />
+                                <ValidationMessage For="@(() => personaJuridicaUpdate.Rol)" />
+                            </div>
+                        </div>
+
+                        <div class="form-group row mb-5">
+                            <div class="col-lg-6 mb-5 mb-lg-0">
+                                <label class="form-label fw-bolder text-gray-900 fs-6">Tipo de sociedad</label>
+                                <select id="tipo_sociedad"
+                                        class="form-control selectpicker"
+                                        data-size="7"
+                                        data-live-search="true"
+                                        data-container="body"
+                                        @onchange="SeleccionTipoSociedad">
+                                    @if (sociedades != null)
+                                    {
+                                        @foreach (var x in sociedades)
+                                        {
+                                            if (x.Id == personaJuridicaUpdate.Id_tipo_sociedad)
+                                            {
+                                                <option value="@x.Id" selected>@x.Tipo_sociedad</option>
+                                            }
+                                            else
+                                            {
+                                                <option value="@x.Id">@x.Tipo_sociedad</option>
+                                            }
+                                        }
+                                    }
+                                </select>
+                                <ValidationMessage For="@(() => personaJuridicaUpdate.Id_tipo_sociedad)" />
+                            </div>
+                            <div class="col-lg-6">
+                                <label class="form-label fw-bolder text-gray-900 fs-6">País</label>
+                                <select id="pais"
+                                        class="form-control selectpicker"
+                                        data-size="7"
+                                        data-live-search="true"
+                                        data-container="body"
+                                        @onchange="SeleccionDePais">
+                                    @if (paises != null)
+                                    {
+                                        @foreach (var x in paises)
+                                        {
+                                            if (x.Id == personaJuridicaUpdate.Id_pais)
+                                            {
+                                                <option value="@x.Id" selected>@x.Pais</option>
+                                            }
+                                            else
+                                            {
+                                                <option value="@x.Id">@x.Pais</option>
+                                            }
+
+                                        }
+                                    }
+                                </select>
+                                <ValidationMessage For="@(() => personaJuridicaUpdate.Id_pais)" />
+                            </div>
+                        </div>
+                        @*<ValidationSummary />*@
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-success mr-2">Guardar</button>
+                        <button type="reset" class="btn btn-secondary" @onclick="Cancel">Cancelar</button>
+                    </div>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+}
+
+@code
+{
+    [CascadingParameter] BlazoredModalInstance ModalInstance { get; set; }
+    private MPersonaJuridicaUpdate personaJuridicaUpdate = new MPersonaJuridicaUpdate();
+    [Parameter] public List<MListaPaises> paises { get; set; }
+    [Parameter] public List<MListaTipoSociedad> sociedades { get; set; }
+    public bool invalidCuit;
+    [Parameter] public MPersonaJuridicaGet _personaJuridica { get; set; }
+    private MRespuestaBoolMensaje resultado = new MRespuestaBoolMensaje();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            if (_personaJuridica != null)
+            {
+                personaJuridicaUpdate.Uid_persona_fisica = _personaJuridica.Uid_persona_fisica;
+                personaJuridicaUpdate.Uid_persona_juridica = _personaJuridica.Uid_persona_juridica;
+                personaJuridicaUpdate.Id = _personaJuridica.Id;
+                personaJuridicaUpdate.Nombre_fantasia = _personaJuridica.Nombre_fantasia;
+                personaJuridicaUpdate.Nombre_legal = _personaJuridica.Nombre_legal;
+                personaJuridicaUpdate.Cuit = _personaJuridica.Cuit;
+                personaJuridicaUpdate.Rol = _personaJuridica.Rol;
+                personaJuridicaUpdate.Id_pais = _personaJuridica.Id_pais;
+                personaJuridicaUpdate.Id_tipo_sociedad = _personaJuridica.Id_tipo_sociedad;
+            }
+            await jsRuntime.InvokeVoidAsync("SwalCerrar", "2");
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            await ModalInstance.CloseAsync();
+        }
+    }
+
+    protected void SeleccionTipoSociedad(ChangeEventArgs e)
+    {
+        var idTipoSociedad = int.Parse(e.Value.ToString());
+        personaJuridicaUpdate.Id_tipo_sociedad = idTipoSociedad;
+    }
+
+    protected void SeleccionDePais(ChangeEventArgs e)
+    {
+        var idPais = int.Parse(e.Value.ToString());
+        personaJuridicaUpdate.Id_pais = idPais;
+    }
+
+    protected async Task EditarPersonaJuridica()
+    {
+        await jsRuntime.InvokeVoidAsync("SwalLoading", "Guardando...");
+        using var response = await Http.PostAsJsonAsync("api/PersonaJuridica/Editar", personaJuridicaUpdate);
+        resultado = await response.Content.ReadFromJsonAsync<MRespuestaBoolMensaje>();
+        if (resultado.resultado == true)
+        {
+            var Confirm1 = await jsRuntime.InvokeAsync<bool>("SwalNormal", "Correcto!", "Se actualizaron los datos correctamente!", "success", false);
+            if (Confirm1)
+            {
+                await ModalInstance.CloseAsync(ModalResult.Ok<MPersonaJuridicaUpdate>(personaJuridicaUpdate));
+            }
+        }
+        else
+        {
+            var Confirm2 = await jsRuntime.InvokeAsync<bool>("SwalNormal", "Oops...", resultado.mensaje, "error", false);
+            if (Confirm2)
+            {
+                Cancel();
+            }
+        }
+
+    }
+
+    void Cancel()
+    {
+        ModalInstance.CancelAsync();
+    }
+
+    protected async Task FormSubmitted()
+    {
+        if (invalidCuit == false)
+        {
+            try
+            {
+                await EditarPersonaJuridica();
+            }
+            catch
+            {
+                var Confirm2 = await jsRuntime.InvokeAsync<bool>("SwalNormal", "Oops...", "No se pudo modificar a la persona.", "error", false);
+                if (Confirm2)
+                {
+                    Cancel();
+                }
+            }
+        }
+        else
+        {
+            var Confirm3 = await jsRuntime.InvokeAsync<bool>("SwalNormal", "Oops...", "El cuit/cuil " + personaJuridicaUpdate.Cuit + " ingresado no se corresponde con el dni. Por favor revise sus datos y vuelva a intentarlo.", "error", false);
+            if (Confirm3)
+            {
+                Cancel();
+            }
+        }
+    }
+}

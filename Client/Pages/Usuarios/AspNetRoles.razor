@@ -1,0 +1,249 @@
+﻿@page "/Usuarios/AspNetRoles"
+@layout NuevoLayout
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@inject HttpClient Http
+@attribute [Authorize(Roles = "admin, super")]
+@using AutenticacionBlazor.Shared.Modelos.Identity
+@using AutenticacionBlazor.Shared.Modelos.Global
+@inject NavigationManager NavigationManager
+@inject IModalService Modal
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@using Newtonsoft.Json
+@inject IJSRuntime jsRuntime
+
+<AuthorizeView>
+    <Authorized>
+        <div class="card card-custom gutter-b">
+            <div class="card-header border-0 py-5">
+                <h3 class="card-title align-items-start flex-column">
+                    <span class="card-label font-weight-bolder text-dark font-size-h2 pt-2">Roles:</span>
+                </h3>
+                <div class="card-toolbar">
+                    <div @onclick="Alta" class="btn btn-success font-weight-bolder font-size-sm">
+                        <span class="svg-icon svg-icon-md svg-icon-white">
+                            <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="24px" height="24px" viewBox="0 0 24 24" version="1.1">
+                                <g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+                                    <rect x="0" y="0" width="24" height="24" />
+                                    <circle fill="#000000" opacity="0.3" cx="12" cy="12" r="10" />
+                                    <path d="M11,11 L11,7 C11,6.44771525 11.4477153,6 12,6 C12.5522847,6 13,6.44771525 13,7 L13,11 L17,11 C17.5522847,11 18,11.4477153 18,12 C18,12.5522847 17.5522847,13 17,13 L13,13 L13,17 C13,17.5522847 12.5522847,18 12,18 C11.4477153,18 11,17.5522847 11,17 L11,13 L7,13 C6.44771525,13 6,12.5522847 6,12 C6,11.4477153 6.44771525,11 7,11 L11,11 Z" fill="#000000" />
+                                </g>
+                            </svg>
+                        </span>Agregar Rol
+                    </div>
+                </div>
+            </div>
+        </div>
+        @*<EditForm Model=@aspnetroles>
+            <div class="row" style="display:flex;flex-direction:row;align-items:flex-end;justify-content:space-between">
+                <div class="col-10">
+                    <label><i><b>Búsqueda por nombre de rol:</b></i></label>
+                    <input @bind="@term"
+                           class="form-control"
+                           placeholder="Buscar..." />
+                    <div class="col-2">
+                        <button class="btn btn-info btn-block mr-3"
+                                @onclick="@(() => Search(term))">
+                            <i class="flaticon2-search"></i>Buscar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </EditForm>*@
+
+        @if (aspnetroles == null)
+        {
+            <div class="row">
+                <div class="col-12">
+                    <div class="spinner spinner-track spinner-primary spinner-lg mr-15" style="margin-left: 43%;"></div>
+                </div>
+            </div>
+            <br />
+            <div class="row">
+                <div class="col-12">
+                    <p style="margin-left: 43%;"><b>Cargando...</b></p>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="card rounded border p-10">
+                <div class="table-responsive">
+                    <table id="table-data-aspnetroles" class="table table-striped gy-7 gs-7">
+                        <thead>
+                            <tr class="fw-bold fs-6 text-gray-800">
+                                <th>#</th>
+                                <th>RoleId</th>
+                                <th>RoleName</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var aspnetrole in aspnetroles)
+                            {
+                                <tr>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <button type="button"
+                                                    class="btn btn-light-primary btn-active-primary ctooltip"
+                                                    data-bs-toggle="tooltip"
+                                                    data-bs-custom-class="tooltip-dark"
+                                                    data-bs-placement="top"
+                                                    title="Modificar"
+                                                    @onclick="@(() => Editar(aspnetrole.RoleId))">
+                                                <i class="bi bi-pencil-square fs-1"></i>
+                                            </button>
+                                            <button type="button"
+                                                    class="btn btn-light-danger btn-active-danger ctooltip"
+                                                    data-bs-toggle="tooltip"
+                                                    data-bs-custom-class="tooltip-dark"
+                                                    data-bs-placement="top"
+                                                    title="Borrar"
+                                                    @onclick="@(() => Eliminar(aspnetrole))">
+                                                <i class="bi bi-trash fs-1"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                    <td>@aspnetrole.RoleId</td>
+                                    <td>@aspnetrole.RoleName</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+    </Authorized>
+    <NotAuthorized>
+        <p>&nbsp;</p>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code
+{
+    private MAspNetRoles[] aspnetroles;
+    private string _usuario;
+    private string term = new string("");
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var userAuth = authState.User;
+            _usuario = authState.User.Claims.ToList().FirstOrDefault(x => x.Type == "sub").Value;
+
+            await CargaDatos();
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            exception.Redirect();
+        }
+    }
+
+    protected async Task CargaDatos()
+    {
+        aspnetroles = await Http.GetFromJsonAsync<MAspNetRoles[]>("api/User/GetAspNetRoles");
+        if (aspnetroles != null)
+        {
+            await CargarDataTable();
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await jsRuntime.InvokeVoidAsync("ListaAspNetRoles");
+    }
+
+    protected async Task QuitarDataTable()
+    {
+        await jsRuntime.InvokeVoidAsync("QuitarDataTable", "table-data-aspnetroles");
+    }
+    protected async Task CargarDataTable()
+    {
+        await jsRuntime.InvokeVoidAsync("CargarDataTable", "table-data-aspnetroles");
+    }
+
+    public async Task Alta()
+    {
+        await QuitarDataTable();
+        var parameters = new ModalParameters();
+        var myModal = Modal.Show<Usuarios.RolAlta>("Alta Rol", parameters);
+        var result = await myModal.Result;
+        if (result.Cancelled)
+        {
+            Console.WriteLine("Modal was cancelled");
+            await CargarDataTable();
+        }
+        else
+        {
+            aspnetroles = await Http.GetFromJsonAsync<MAspNetRoles[]>("api/User/GetAspNetRoles");
+            await CargarDataTable();
+        }
+    }
+
+    public async Task Editar(string Id)
+    {
+        await QuitarDataTable();
+        var parameters = new ModalParameters();
+        parameters.Add(nameof(Usuarios.RolEditar.id), Id);
+        var myModal = Modal.Show<Usuarios.RolEditar>("Editar Rol", parameters);
+        var result = await myModal.Result;
+        if (result.Cancelled)
+        {
+            Console.WriteLine("Modal was cancelled");
+            await CargarDataTable();
+        }
+        else
+        {
+            aspnetroles = await Http.GetFromJsonAsync<MAspNetRoles[]>("api/User/GetAspNetRoles");
+            await CargarDataTable();
+        }
+    }
+
+    protected async Task Eliminar(MAspNetRoles Rol)
+    {
+        await QuitarDataTable();
+        string ApiPath = "api/User/DeleteRole/";
+        var parameters = new ModalParameters();
+        parameters.Add(nameof(Global.ModalEliminar.flag), true);
+        parameters.Add(nameof(Global.ModalEliminar.modelo), Rol);
+        parameters.Add(nameof(Global.ModalEliminar.apiPath), ApiPath);
+
+        var options = new ModalOptions()
+        {
+            HideCloseButton = true,
+            //Animation = ModalAnimation.FadeInOut(1)
+        };
+        var myModal = Modal.Show<Global.ModalEliminar>(null, parameters, options);
+        var result = await myModal.Result;
+
+        if (result.Cancelled)
+        {
+            Console.WriteLine("Modal was cancelled");
+            await CargarDataTable();
+        }
+        else
+        {
+            aspnetroles = await Http.GetFromJsonAsync<MAspNetRoles[]>("api/User/GetAspNetRoles");
+            await CargarDataTable();
+        }
+    }
+
+    //private async Task Search(string term)
+    //{
+    //    if (term.Length > 1)
+    //    {
+    //        aspnetroles = await Http.GetFromJsonAsync<MAspNetRoles[]>("api/User/SearchRoles/" + term);
+    //        if (aspnetroles.Length == 0)
+    //        {
+    //            toastService.ShowError($"No se encontró su búsqueda, intentelo nuevamente", "UPS!");
+    //        }
+    //    }
+
+    //    if (string.IsNullOrEmpty(term))
+    //    {
+    //        await CargaDatos();
+    //    }
+    //}
+
+}

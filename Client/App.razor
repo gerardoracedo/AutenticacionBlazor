@@ -1,0 +1,80 @@
+@inject NavigationManager NavigationManager
+@inherits LayoutComponentBase
+@inject NavigationManager Navigation
+@inject SignOutSessionStateManager SignOutManager
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@inject Blazored.LocalStorage.ISyncLocalStorageService localStorage
+@using AutenticacionBlazor.Shared.Models.Identity
+@inject HttpClient Http
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IJSRuntime jsRuntime
+
+<CascadingBlazoredModal FocusFirstElement="false">
+    <Router AppAssembly="@typeof(Program).Assembly">
+        <Found Context="routeData">
+            <AuthorizeRouteView RouteData="@routeData">
+                <Authorizing>
+                    <div id="Autorizando1" style="background-color: #fff !important;">
+                        <div id="Autorizando2">
+                            <div class="Autorizando3">
+                                <div class="row">
+                                    <div class="col-12 mb-10">
+                                        <center><img src="images/Login-YB.png" /></center>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-12">
+                                        <center><img src="/images/Preloader_3.gif" /></center>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </Authorizing>
+                <NotAuthorized>
+                    @{
+                        var returnUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
+                        <RedirectToLogin ReturnUrl="@returnUrl" />
+
+                    }
+                    @if (!context.User.Identity.IsAuthenticated)
+                    {
+                        <RedirectToLogin />
+                    }
+                    else
+                    {
+                        <LayoutView Layout="@typeof(MainLayout)">
+                            <div class="row">
+                                <div class="col-12">
+                                    <div class="d-flex flex-row-fluid flex-column justify-content-end align-items-center text-center pb-40">
+                                        <h1 class="display-1 font-weight-bold">Error!</h1>
+                                        <span class="display-4 font-weight-boldest mb-8">No se encontro la página solicitada.</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </LayoutView>
+                    }
+                </NotAuthorized>
+            </AuthorizeRouteView>
+        </Found>
+        <NotFound>
+            <Loadingpage></Loadingpage>
+            <CascadingAuthenticationState>
+                <LayoutView Layout="@typeof(MainLayout)">
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="d-flex flex-row-fluid flex-column justify-content-end align-items-center text-center pb-40">
+                                <h1 class="display-1 font-weight-bold">Error!</h1>
+                                <span class="display-4 font-weight-boldest mb-8">No se encontro la página solicitada.</span>
+                            </div>
+                        </div>
+                    </div>
+                </LayoutView>
+            </CascadingAuthenticationState>
+        </NotFound>
+    </Router>
+</CascadingBlazoredModal>
+@code{
+
+}

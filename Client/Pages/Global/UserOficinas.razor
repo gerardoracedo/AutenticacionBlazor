@@ -1,0 +1,140 @@
+﻿@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@inject HttpClient Http
+@attribute [Authorize(Roles = "admin, super")]
+@using AutenticacionBlazor.Shared.Modelos.Identity
+@using AutenticacionBlazor.Shared.Modelos.Global
+@inject NavigationManager NavigationManager
+@using System.Collections
+@using AutenticacionBlazor.Client.Helpers
+@using AutenticacionBlazor.Client.Pages.Usuarios
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IJSRuntime jsRuntime
+
+@if (cargando)
+{
+    <div class="row bg-light">
+        <div class="col-12">
+            <div class="bg-light spinner spinner-track spinner-primary spinner-lg mr-15" style="margin-left: 43%;"></div>
+        </div>
+    </div>
+    <br class="row bg-light" />
+    <div class="row bg-light">
+        <div class="col-12">
+            <p style="margin-left: 43%;"><b>Cargando...</b></p>
+        </div>
+    </div>
+}
+@if (aspnetuser == null)
+{
+    <div class="row">
+        <div class="col-12">
+            <p style="margin-left: 43%;"><b>Cargando...</b></p>
+        </div>
+    </div>
+}
+else
+{
+    <div><b>Usuario: </b></div>
+    <div><i>@aspnetuser.Email</i></div>
+    <div><b>Oficinas: </b></div>
+    <ul>
+        @foreach (var userOficina in userOficinas)
+        {
+            <li>@userOficina.Oficina</li>
+        }
+    </ul>
+    <br />
+    <EditForm Model=@aspnetuser OnValidSubmit=@FormSubmitted>
+        <DataAnnotationsValidator />
+        <p><b>Asignar Oficinas: </b></p>
+        <SelectorMultiple Seleccionados="Seleccionados" NoSeleccionados="NoSeleccionados"></SelectorMultiple>
+        <br />
+        @*<ValidationSummary />*@
+        <div style="display:flex;flex-direction:row;align-items:center;justify-content:space-evenly;">
+            <button type="submit" class="btn btn-primary">Aceptar</button>
+            <button class="btn btn-secondary" @onclick="Cancel">Cancelar</button>
+        </div>
+    </EditForm>
+}
+
+@code
+{
+    [CascadingParameter] private Task<AuthenticationState> authenticationState { get; set; }
+    private bool cargando = false;
+    [CascadingParameter] BlazoredModalInstance ModalInstance { get; set; }
+    [Parameter] public MAspNetUsers aspnetuser { get; set; }
+    [Parameter] public MOficina[] oficinas { get; set; }
+    [Parameter] public MOficina[] userOficinas { get; set; }
+    [Parameter] public MOficina[] notUserOficinas { get; set; }
+
+    [Parameter] public List<MOficina> OficinasSeleccionadas { get; set; } = new List<MOficina>();
+    [Parameter] public List<MOficina> OficinasNoSeleccionadas { get; set; } = new List<MOficina>();
+    private List<MSelectorMultiple> Seleccionados { get; set; } = new List<MSelectorMultiple>();
+    private List<MSelectorMultiple> NoSeleccionados { get; set; } = new List<MSelectorMultiple>();
+
+    protected override void OnInitialized()
+    {
+        OficinasSeleccionadas = userOficinas.ToList();
+        OficinasNoSeleccionadas = notUserOficinas.ToList();
+        Seleccionados = OficinasSeleccionadas.Select(x => new MSelectorMultiple(x.Id_Oficina.ToString(), x.Oficina)).ToList();
+        NoSeleccionados = OficinasNoSeleccionadas.Select(x => new MSelectorMultiple(x.Id_Oficina.ToString(), x.Oficina)).ToList();
+    }
+
+    protected async Task FormSubmitted()
+    {
+        try
+        {
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            if (authState.User.IsInRole("AltaBajaOficinaUsuario"))
+            {
+                await DeleteNoSeleccionados();
+                await InsertSeleccionados();
+                await ModalInstance.CloseAsync(ModalResult.Ok<MAspNetUsers>(aspnetuser));
+                await jsRuntime.InvokeAsync<bool>("SwalNormal", "Correcto!", "Oficina/s actualizado/s correctamente.", "success", false);
+            }
+            else
+            {
+                await jsRuntime.InvokeAsync<bool>("SwalNormal", "Oops...", "No tienes permiso para realizar esta acción", "error", true);
+            }
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            await jsRuntime.InvokeAsync<bool>("SwalNormal", "Oops...", "No fue posible actualizar la/s oficina/s.", "error", true);
+            Console.WriteLine("No fue posible actualizar la/s oficina/s.", exception);
+            Cancel();
+        }
+    }
+
+    void Cancel()
+    {
+        ModalInstance.CloseAsync();
+    }
+
+    protected async Task DeleteNoSeleccionados()
+    {
+        cargando = true;
+        foreach (var notsel in NoSeleccionados)
+        {
+            if ((Array.Exists(userOficinas, element => element.Id_Oficina.ToString() == notsel.Llave)))
+            {
+                await Http.PostAsJsonAsync("api/Global/RemoveOficinaFromUser/" + notsel.Llave, aspnetuser);
+            }
+        }
+        cargando = false;
+    }
+
+    protected async Task InsertSeleccionados()
+    {
+        cargando = true;
+        foreach (var sel in Seleccionados)
+        {
+            if (!(Array.Exists(userOficinas, element => element.Id_Oficina.ToString() == sel.Llave)))
+            {
+                await Http.PostAsJsonAsync("api/Global/AssignOficinaToUser/" + sel.Llave, aspnetuser);
+            }
+        }
+        cargando = false;
+    }
+}
+

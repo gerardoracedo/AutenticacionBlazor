@@ -1,0 +1,166 @@
+﻿@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@inject HttpClient Http
+@inject IJSRuntime jsRuntime
+@layout NoLayout
+@attribute [Authorize(Roles = "super")]
+@using AutenticacionBlazor.Shared.Modelos.Rentas.Comercio
+@using AutenticacionBlazor.Shared.Modelos.Global
+@inject NavigationManager NavigationManager
+@inject IModalService Modal
+@inject Blazored.LocalStorage.ISyncLocalStorageService localStorage
+@inject IJSRuntime JSRuntime
+
+@if (actividadesUpdate == null)
+{
+    <div class="row">
+        <div class="col-12">
+            <div class="spinner spinner-track spinner-primary spinner-lg mr-15" style="margin-left: 49%;"></div>
+        </div>
+    </div>
+}
+else
+{
+<EditForm Model=@actividadesUpdate OnValidSubmit=@FormSubmitted>
+    <DataAnnotationsValidator />
+    <div class="col-lg-12">
+        <label>Código:</label>
+        <input @bind="@actividadesUpdate.Codigo" class="form-control" placeholder="Codigo..." readonly />
+        <span class="form-text text-muted"><ValidationMessage For="@(() => actividadesUpdate.Codigo)" /></span>
+    </div>
+    <div class="col-lg-12">
+        <label>Nombre :</label>
+        <input @bind="@actividadesUpdate.Descripcion" class="form-control" placeholder="Nombre..." />
+        <span class="form-text text-muted"><ValidationMessage For="@(() => actividadesUpdate.Descripcion)" /></span>
+    </div>
+    <div class="col-lg-12">
+        <label>Alicuota:</label>
+        <input @bind="@actividadesUpdate.Alicuota" class="form-control" placeholder="Alicuota..." />
+        <span class="form-text text-muted"><ValidationMessage For="@(() => actividadesUpdate.Alicuota)" /></span>
+    </div>
+    <div class="col-lg-12">
+        <label>Fecha Inicio:</label>
+        <input @bind="@actividadesUpdate.Fecha_inicio" class="form-control datepicker_ym" @onclick="InicioDeActividad" placeholder="Fecha Inicio..." />
+        <span class="form-text text-muted"><ValidationMessage For="@(() => actividadesUpdate.Fecha_inicio)" /></span>
+    </div>
+    <br /><br />
+    <div class="fv-row mb-10 form-check">
+        <input id="exento" type="checkbox" @bind="bandera" class="form-check-input" name="exento" @onclick="CheckExento">
+        <label for="exento" class="form-check-label fw-bold ps-2 fs-6">Es Exento?</label>
+    </div>
+    <br /><br />
+    <div class="row">
+        <div class="col-lg-12" style="display:flex;justify-content:center">
+            <button type="submit" class="btn btn-success mr-2">Guardar</button>
+            <button type="reset" class="btn btn-secondary" @onclick="Cancel">Cancelar</button>
+        </div>
+    </div>
+</EditForm>
+}
+
+@code
+{
+    [CascadingParameter] BlazoredModalInstance ModalInstance { get; set; }
+    [Parameter] public MListaActividades _actividades { get; set; }
+    bool bandera = false;
+    private MActividadesEditar actividadesUpdate = new MActividadesEditar();
+    private MRespuestaBoolMensaje resultado = new MRespuestaBoolMensaje();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            if (_actividades != null)
+            {
+                actividadesUpdate.Id = _actividades.Id;
+                actividadesUpdate.Codigo = _actividades.Codigo;
+                actividadesUpdate.Descripcion = _actividades.Descripcion;
+                actividadesUpdate.Fecha_inicio = _actividades.Fecha_inicio;
+                actividadesUpdate.Fecha_fin = _actividades.Fecha_fin;
+                actividadesUpdate.Alicuota = _actividades.Alicuota;
+                actividadesUpdate.Exento = _actividades.Excento;
+
+                if (actividadesUpdate.Exento != 1)
+                {
+                    bandera = false;
+                }
+                else
+                {
+                    bandera = true;
+                }
+            }
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            await ModalInstance.CloseAsync();
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await jsRuntime.InvokeVoidAsync("DatePicker_YM");
+    }
+
+    protected async Task EditarActividad()
+    {
+        using var response = await Http.PostAsJsonAsync("api/Comercio/Actividades/Personas/Editar", actividadesUpdate);
+        resultado = await response.Content.ReadFromJsonAsync<MRespuestaBoolMensaje>();
+        if (resultado.resultado == true)
+        {
+            var Confirm1 = await jsRuntime.InvokeAsync<bool>("SwalNormal", "Se ha guardo correctamente los datos!", resultado.mensaje, "success", false);
+            if (Confirm1)
+            {
+                await ModalInstance.CloseAsync(ModalResult.Ok<MActividadesEditar>(actividadesUpdate));
+                await jsRuntime.InvokeVoidAsync("SwalCerrar", "2");
+            }
+        }
+        else
+        {
+            var Confirm2 = await jsRuntime.InvokeAsync<bool>("SwalNormal", "Oops...", resultado.mensaje, "error", false);
+            if (Confirm2)
+            {
+                Cancel();
+                await jsRuntime.InvokeVoidAsync("SwalCerrar", "2");
+            }
+        }
+    }
+
+    void Cancel()
+    {
+        ModalInstance.CancelAsync();
+    }
+
+    protected async Task FormSubmitted()
+    {
+        try
+        {
+            await EditarActividad();
+        }
+        catch
+        {
+            Cancel();
+        }
+    }
+
+    protected async Task InicioDeActividad()
+    {
+        var _inicioactividad = await jsRuntime.InvokeAsync<string>("DatePicker_YM");
+        actividadesUpdate.Fecha_inicio = _inicioactividad + "-01";
+    }
+
+    void CheckExento()
+    {
+        if (!bandera)
+        {
+            actividadesUpdate.Exento = 1;
+            bandera = !bandera;
+        }
+        else
+        {
+            actividadesUpdate.Exento = 0;
+            bandera = !bandera;
+        }
+
+    }
+
+}

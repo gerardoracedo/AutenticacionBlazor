@@ -1,0 +1,40 @@
+﻿@page "/Logout"
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager Navigation
+@inject Blazored.LocalStorage.ISyncLocalStorageService localStorage
+@inject SignOutSessionStateManager SignOutManager
+@using AutenticacionBlazor.Shared.Modelos.Global
+@inject HttpClient Http
+
+@code {
+    [Parameter]
+    public string ReturnUrl { get; set; }
+    private MVerificarLoginProvider _verificarlogin;
+    protected override async Task OnInitializedAsync()
+    {
+        _verificarlogin = await Http.GetFromJsonAsync<MVerificarLoginProvider>("api/Global/Verificarlogin/"+ localStorage.GetItem<string>("lS_Cuit"));
+        if(_verificarlogin.Proveedor == "afip")
+        {
+            ReturnUrl = "https://autenticar.gob.ar/auth/realms/yerbabuena-afip/protocol/openid-connect/logout?redirect_uri="+ Navigation.BaseUri + "authentication/logout";
+        }else if (_verificarlogin.Proveedor == "anses")
+        {
+            ReturnUrl = "https://autenticar.gob.ar/auth/realms/yerbabuena-anses/protocol/openid-connect/logout?redirect_uri=" + Navigation.BaseUri + "authentication/logout";
+        }else if (_verificarlogin.Proveedor == "miarg")
+        {
+            ReturnUrl = "https://autenticar.gob.ar/auth/realms/yerbabuena-miarg/protocol/openid-connect/logout?redirect_uri=" + Navigation.BaseUri + "authentication/logout";
+        }
+        else
+        {
+            ReturnUrl = Navigation.BaseUri + "authentication/logout";
+        }
+
+        localStorage.Clear();
+        await SignOutManager.SetSignOutState();
+        Navigation.NavigateTo($"{ReturnUrl}", forceLoad: true);
+
+    }
+
+}

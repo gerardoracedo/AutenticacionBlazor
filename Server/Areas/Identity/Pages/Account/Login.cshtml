@@ -1,0 +1,93 @@
+﻿@page "/Login"
+@model LoginModel
+
+@{
+    ViewData["Title"] = "Mi Yerba Buena - Iniciar Sesión";
+}
+<!--begin::Form-->
+<form class="form w-100" id="account" method="post">
+    <!--begin::Heading-->
+    <div class="text-center mb-10">
+        <!--begin::Logo-->
+        <img src="~/images/logo.png" class="h-50px" alt="" />
+        <!--end::Logo-->
+        <!--begin::Title-->
+        <h4 class="text-dark my-5">Iniciar sesión</h4>
+        <!--end::Title-->
+    </div>
+    <!--begin::Heading-->
+    <!--begin::Input group-->
+    <div class="fv-row mb-5">
+        <!--begin::Label-->
+        <label class="form-label fs-6 fw-bolder text-dark">Correo electrónico</label>
+        <!--end::Label-->
+        <!--begin::Input-->
+        <input class="form-control form-control-sm form-control-solid" asp-for="Input.Email" />
+        <span asp-validation-for="Input.Email" class="text-danger"></span>
+        <!--end::Input-->
+    </div>
+    <!--end::Input group-->
+    <!--begin::Input group-->
+    <div class="fv-row mb-10">
+        <!--begin::Wrapper-->
+        <div class="d-flex flex-stack mb-2">
+            <!--begin::Label-->
+            <label class="form-label fw-bolder text-dark fs-6 mb-0">Contraseña</label>
+            <!--end::Label-->
+        </div>
+        <!--end::Wrapper-->
+        <!--begin::Input-->
+        <input class="form-control form-control-sm form-control-solid" asp-for="Input.Password" />
+        <span asp-validation-for="Input.Password" class="text-danger"></span>
+        <!--end::Input-->
+    </div>
+    <!--end::Input group-->
+    <!--begin::Actions-->
+    <div class="text-center">
+        <!--begin::Submit button-->
+        <button type="submit" class="btn btn-lg btn-primary w-100 mb-5">
+            Ingresar
+        </button>
+        <!--end::Submit button-->
+        <!--begin::Separator-->
+        <hr />
+        <div class="text-center fw-bolder mb-5">O puede usar una de las siguientes opciones:</div>
+        <!--end::Separator-->
+    </div>
+    <!--end::Actions-->
+</form>
+<!--end::Form-->
+@{
+    if ((Model.ExternalLogins?.Count ?? 0) == 0)
+    {
+        <div>
+
+        </div>
+    }
+    else
+    {
+        <form class="form" id="external-account" asp-page="./ExternalLogin" asp-route-returnUrl="@Model.ReturnUrl" method="post">
+            <div class="d-grid gap-2">
+                @foreach (var provider in Model.ExternalLogins)
+                {
+                    if (@provider.Name == "afip")
+                    {
+                        <button class="btn btn-sm btn-afip botnlogin" type="submit" name="provider" value="@provider.Name"><img src="/images/afip.png" width="40" /></button>
+                    }
+                    else if (@provider.Name == "anses")
+                    {
+                        <button class="btn btn-sm btn-anses botnlogin" type="submit" name="provider" value="@provider.Name"><img src="/images/anses.png" width="40" /></button>
+                    }
+                    else if (@provider.Name == "miarg")
+                    {
+                        <button class="btn btn-sm btn-mi-arg botnlogin" type="submit" name="provider" value="@provider.Name"><img src="/images/Miargentina.png" width="40" /></button>
+                    }
+                }
+            </div>
+        </form>
+    }
+}
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

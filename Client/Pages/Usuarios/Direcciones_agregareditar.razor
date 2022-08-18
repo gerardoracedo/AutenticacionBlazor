@@ -1,0 +1,460 @@
+﻿@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@layout MainLayout
+@inject IJSRuntime jsRuntime
+@using System.Security.Claims
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject HttpClient Http
+@using AutenticacionBlazor.Shared.Modelos.Global
+@using AutenticacionBlazor.Shared.Modelos.Personas
+@using AutenticacionBlazor.Shared.Modelos.Personas.Fisica
+@using AutenticacionBlazor.Shared.Modelos.Personas.Juridica
+@attribute [Authorize(Roles = "super,general")]
+@inject NavigationManager NavigationManager
+@inject Blazored.LocalStorage.ISyncLocalStorageService localStorage
+@using AutenticacionBlazor.Shared.Models.Identity
+
+@if (_modificarDireccion == null && _paises == null)
+{
+    <div class="row">
+        <div class="col-12">
+            <div class="spinner spinner-track spinner-primary spinner-lg mr-15" style="margin-left: 43%;"></div>
+        </div>
+    </div>
+}
+else
+{
+
+    @if (_paises != null)
+    {
+        <div class="modal-backdrop fade show"></div>
+        <div class="modal fade show d-block" style="pointer-events: none;" tabindex="-1" role="dialog">
+            <div class="modal-dialog modal-lg modal-dialog-scrollable" role="document">
+                <EditForm Model=@_iuDireccion OnValidSubmit=@EnviarDireccion class="form w-100" id="CC">
+                    <div class="modal-content border-primary">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="staticBackdropLabel">@ModalInstance.Title</h5>
+                            <button type="button" class="btn-close" @onclick="CerrarModalEditar" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body" style="max-height: 75vh; overflow-y: auto;">
+                            <DataAnnotationsValidator />
+                            <div class="form-group row mb-5">
+                                <div class="col-lg-6 mb-5 mb-lg-0">
+                                    <label class="form-label fw-bolder text-gray-900 fs-6">Persona</label>
+                                    @if (_accion == 1)
+                                    {
+                                        <select class="form-control selectpicker" data-size="7" data-live-search="true" @onchange="SeleccionPersona">
+                                            <option value="0" selected disabled>Seleccione una opción</option>
+                                            @foreach (var lp in _listaPersonas)
+                                            {
+                                                <option value="@lp.Id">@lp.Informacion</option>
+                                            }
+                                        </select>
+                                    }
+                                    else
+                                    {
+                                        <select class="form-control selectpicker" data-size="7" data-live-search="true" @onchange="SeleccionPersona">
+                                            @foreach (var lp2 in _listaPersonas)
+                                            {
+                                                @if (lp2.Id == _iuDireccion.Id_persona)
+                                                {
+                                                    <option value="@lp2.Id" selected>@lp2.Informacion</option>
+                                                    @*<input type="hidden" @bind="@_iuDireccion.Id_persona" class="form-control" disabled />
+                                                        <input value="@lp2.Informacion" class="form-control" disabled />*@
+                                                }
+                                                else
+                                                {
+                                                    <option value="@lp2.Id">@lp2.Informacion</option>
+                                                }
+                                            }
+                                        </select>
+
+                                    }
+                                    <ValidationMessage For="@(() => _iuDireccion.Id_persona)" />
+                                </div>
+                                <div class="col-lg-6">
+                                    <label class="form-label fw-bolder text-gray-900 fs-6">Tipo de dirección</label>
+                                    <select class="form-control selectpicker" data-size="7" data-live-search="true" @onchange="SeleccionTipoDireccion">
+                                        @if (_accion == 1)
+                                        {
+                                            <option value="0" selected disabled>Seleccione una opción</option>
+                                        }
+                                        @foreach (var t in _tipodirecciones)
+                                        {
+                                            @if (t.Id == _iuDireccion.Id_tipo_direccion)
+                                            {
+                                                <option value="@t.Id" selected>@t.Tipo_direccion</option>
+                                            }
+                                            else
+                                            {
+                                                <option value="@t.Id">@t.Tipo_direccion</option>
+                                            }
+                                        }
+                                    </select>
+                                    <ValidationMessage For="@(() => _iuDireccion.Id_tipo_direccion)" />
+                                </div>
+                            </div>
+
+                            <div class="form-group row mb-5">
+                                <div class="col-lg-6 mb-5 mb-lg-0">
+                                    <label class="form-label fw-bolder text-gray-900 fs-6">Nombre de calle</label>
+                                    <input @bind="@_iuDireccion.Nombre_calle" class="form-control" placeholder="Ingrese un nombre de calle" />
+                                    <ValidationMessage For="@(() => _iuDireccion.Nombre_calle)" />
+                                </div>
+                                <div class="col-lg-6">
+                                    <label class="form-label fw-bolder text-gray-900 fs-6">Número</label>
+                                    <input @bind="@_iuDireccion.Numero" class="form-control" placeholder="Ingrese un numero" />
+                                    <ValidationMessage For="@(() => _iuDireccion.Numero)" />
+                                </div>
+                            </div>
+
+                            <div class="form-group row mb-5">
+                                <div class="col-lg-6 mb-5 mb-lg-0">
+                                    <label class="form-label fw-bolder text-gray-900 fs-6">Código postal</label>
+                                    <input @bind="@_iuDireccion.Codigo_postal" class="form-control" placeholder="Ingrese un codigo postal" />
+                                    <ValidationMessage For="@(() => _iuDireccion.Codigo_postal)" />
+                                </div>
+                                <div class="col-lg-6">
+                                    <label class="form-label fw-bolder text-gray-900 fs-6">Piso:</label>
+                                    <input @bind="@_iuDireccion.Piso" class="form-control" placeholder="Ingrese un piso" />
+                                    <ValidationMessage For="@(() => _iuDireccion.Piso)" />
+                                </div>
+                            </div>
+
+                            <div class="form-group row mb-5">
+                                <div class="col-lg-6 mb-5 mb-lg-0">
+                                    <label class="form-label fw-bolder text-gray-900 fs-6">Departamento:</label>
+                                    <input @bind="@_iuDireccion.Departamento" class="form-control" placeholder="Ingrese un departamento" />
+                                    <ValidationMessage For="@(() => _iuDireccion.Departamento)" />
+                                </div>
+                                <div class="col-lg-6">
+                                    <label class="form-label fw-bolder text-gray-900 fs-6">Sector:</label>
+                                    <input @bind="@_iuDireccion.Sector" class="form-control" placeholder="Ingrese un sector" />
+                                    <ValidationMessage For="@(() => _iuDireccion.Sector)" />
+                                </div>
+                            </div>
+
+                            <div class="form-group row mb-5">
+                                <div class="col-lg-6 mb-5 mb-lg-0">
+                                    <label class="form-label fw-bolder text-gray-900 fs-6">Manzana:</label>
+                                    <input @bind="@_iuDireccion.Manzana" class="form-control" placeholder="Ingrese una manzana" />
+                                    <ValidationMessage For="@(() => _iuDireccion.Manzana)" />
+                                </div>
+                                <div class="col-lg-6">
+                                    <label class="form-label fw-bolder text-gray-900 fs-6">Lote:</label>
+                                    <input @bind="@_iuDireccion.Lote" class="form-control" placeholder="Ingrese un lote" />
+                                    <ValidationMessage For="@(() => _iuDireccion.Lote)" />
+                                </div>
+                            </div>
+
+                            <div class="form-group row mb-5">
+                                <div class="col-lg-4 mb-5 mb-lg-0">
+                                    <label class="form-label fw-bolder text-gray-900 fs-6">País</label>
+                                    <select id="spais" class="form-control selectpicker" data-size="7" data-live-search="true" @onchange="SeleccionDePais">
+                                        @if (_paises == null)
+                                        {
+                                            <option value="0" selected disabled>Seleccione una opción</option>
+                                        }
+                                        else
+                                        {
+                                            @if (_accion == 1)
+                                            {
+                                                <option value="0" selected disabled>Seleccione una opción</option>
+                                            }
+                                            @foreach (var pa in _paises)
+                                            {
+                                                @if (pa.Id == _iuDireccion.Id_pais)
+                                                {
+                                                    <option value="@pa.Id" selected>@pa.Pais</option>
+                                                }
+                                                else
+                                                {
+                                                    <option value="@pa.Id">@pa.Pais</option>
+                                                }
+                                            }
+                                        }
+                                    </select>
+                                    <ValidationMessage For="@(() => _iuDireccion.Id_pais)" />
+                                </div>
+                                <div class="col-lg-4 mb-5 mb-lg-0">
+                                    <label class="form-label fw-bolder text-gray-900 fs-6">Provincia</label>
+                                    <select id="sprovincia" class="form-control selectpicker" data-size="7" data-live-search="true" @onchange="SeleccionDeProvincia">
+                                        @if (_provincias == null)
+                                        {
+                                            <option value="0" selected disabled>Seleccione una opción</option>
+                                        }
+                                        else
+                                        {
+                                            @if (_iuDireccion.Id_provincia <= 0)
+                                            {
+                                                <option value="0" selected disabled>Seleccione una opción</option>
+                                            }
+                                            @foreach (var prov in _provincias)
+                                            {
+                                                @if (prov.Id == _iuDireccion.Id_provincia)
+                                                {
+                                                    <option value="@prov.Id" selected>@prov.Provincia</option>
+                                                }
+                                                else
+                                                {
+                                                    <option value="@prov.Id">@prov.Provincia</option>
+                                                }
+                                            }
+                                        }
+                                    </select>
+                                    <ValidationMessage For="@(() => _iuDireccion.Id_provincia)" />
+                                </div>
+                                <div class="col-lg-4">
+                                    <label class="form-label fw-bolder text-gray-900 fs-6">Localidad</label>
+                                    <select id="slocalidad" class="form-control selectpicker" data-size="7" data-live-search="true" @onchange="SeleccionDeLocalidad">
+                                        @if (_localidades == null)
+                                        {
+                                            <option value="0" selected disabled>Seleccione una opción</option>
+                                        }
+                                        else
+                                        {
+                                            @if (_iuDireccion.Id_localidad <= 0)
+                                            {
+                                                <option value="0" selected disabled>Seleccione una opción</option>
+                                            }
+                                            @foreach (var l in _localidades)
+                                            {
+                                                @if (l.Id == _iuDireccion.Id_localidad)
+                                                {
+                                                    <option value="@l.Id" selected>@l.Localidad</option>
+                                                }
+                                                else
+                                                {
+                                                    <option value="@l.Id">@l.Localidad</option>
+                                                }
+                                            }
+                                        }
+                                    </select>
+                                    <ValidationMessage For="@(() => _iuDireccion.Id_localidad)" />
+                                </div>
+                            </div>
+
+                            <div class="fv-row mb-5">
+                                <label class="form-label fw-bolder text-gray-900 fs-6">Descripción:</label>
+                                <input @bind="@_iuDireccion.Descripcion" class="form-control" placeholder="Ingrese una descripción" />
+                                <ValidationMessage For="@(() => _iuDireccion.Descripcion)" />
+                            </div>
+                            @*<ValidationSummary />*@
+                        </div>
+                        <div class="modal-footer">
+                            <button type="submit" class="btn btn-success mr-2">Guardar</button>
+                            <button type="reset" class="btn btn-secondary" @onclick="CerrarModalEditar">Cancelar</button>
+                        </div>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    }
+}
+
+
+@code {
+    [CascadingParameter] BlazoredModalInstance ModalInstance { get; set; }
+    private string id_identity;
+    [Parameter] public List<MListaPaises> _paises { get; set; }
+    [Parameter] public List<MListaProvincias> _provincias { get; set; }
+    [Parameter] public List<MListaLocalidades> _localidades { get; set; }
+    [Parameter] public List<MListaTipoDirecciones> _tipodirecciones { get; set; }
+    private MRespuestaBoolMensaje _resultado;
+    [Parameter] public MMisDirecciones _modificarDireccion { get; set; }
+    [Parameter] public int _accion { get; set; }
+    private MInsertUpdateDirecciones _iuDireccion = new MInsertUpdateDirecciones();
+
+    [Parameter] public MPersonaFisicaGet _personafisica { get; set; }
+    [Parameter] public List<MPersonaJuridicaGet> _listaPersonaJuridica { get; set; }
+    [Parameter] public List<MListPersonasDirecciones> _listaPersonas { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var userAuth = authState.User;
+        id_identity = authState.User.Claims.ToList().FirstOrDefault(x => x.Type == "sub").Value;
+
+        if (_accion == 0)
+        {
+            // Agregar direccion
+            _accion = 1;
+        }
+
+        if (_modificarDireccion != null)
+        {
+            //Modificar direccion
+            _iuDireccion.Id_persona = _modificarDireccion.Id_persona;
+            _iuDireccion.Id_tipo_direccion = _modificarDireccion.Id_tipo_direccion;
+            _iuDireccion.Nombre_calle = _modificarDireccion.Nombre_calle;
+            _iuDireccion.Numero = _modificarDireccion.Numero;
+            _iuDireccion.Codigo_postal = _modificarDireccion.Codigo_postal;
+            _iuDireccion.Piso = _modificarDireccion.Piso;
+            _iuDireccion.Departamento = _modificarDireccion.Departamento;
+            _iuDireccion.Sector = _modificarDireccion.Sector;
+            _iuDireccion.Manzana = _modificarDireccion.Manzana;
+            _iuDireccion.Lote = _modificarDireccion.Lote;
+            _iuDireccion.Id_pais = _modificarDireccion.Id_pais;
+            _iuDireccion.Id_provincia = _modificarDireccion.Id_provincia;
+            _iuDireccion.Id_localidad = _modificarDireccion.Id_localidad;
+            _iuDireccion.Descripcion = _modificarDireccion.Descripcion;
+            _iuDireccion.Id_direccion_persona = _modificarDireccion.Id_persona_direccion;
+            _iuDireccion.Id_direccion = _modificarDireccion.Id_direccion;
+        }
+        else
+        {
+            //Nueva direccion
+            //_iuDireccion.Id_persona = id_identity;
+        }
+        await jsRuntime.InvokeVoidAsync("SwalCerrar", "1");
+    }
+
+    protected async Task SeleccionPersona(ChangeEventArgs e)
+    {
+        await jsRuntime.InvokeVoidAsync("SwalLoading");
+        var vIdPersona = int.Parse(e.Value.ToString());
+        _iuDireccion.Id_persona = vIdPersona;
+        await jsRuntime.InvokeVoidAsync("SwalCerrar", "1");
+    }
+
+    protected async Task SeleccionTipoDireccion(ChangeEventArgs e)
+    {
+        await jsRuntime.InvokeVoidAsync("SwalLoading");
+        var vtipoDireccion = int.Parse(e.Value.ToString());
+        _iuDireccion.Id_tipo_direccion = vtipoDireccion;
+        await jsRuntime.InvokeVoidAsync("SwalCerrar", "1");
+    }
+
+    protected async Task SeleccionDePais(ChangeEventArgs e)
+    {
+        var idPais = int.Parse(e.Value.ToString());
+        _iuDireccion.Id_pais = idPais;
+
+        await jsRuntime.InvokeVoidAsync("LimpiarSelect", "sprovincia", "0");
+        await jsRuntime.InvokeVoidAsync("LimpiarSelect", "slocalidad", "0");
+
+        if (_iuDireccion.Id_pais == 0)
+        {
+            _iuDireccion.Id_provincia = 0;
+            _iuDireccion.Id_localidad = 0;
+        }
+        else
+        {
+            _iuDireccion.Id_provincia = 0;
+            _iuDireccion.Id_localidad = 0;
+            await jsRuntime.InvokeVoidAsync("SwalLoading", "Cargando provincias...");
+            _provincias = await Http.GetFromJsonAsync<List<MListaProvincias>>("api/Global/Listadeprovincias/Pais/" + idPais);
+            //_localidades = null;
+            if (_provincias != null)
+            {
+                await jsRuntime.InvokeVoidAsync("SwalCerrar", "1");
+            }
+        }
+    }
+
+    protected async Task SeleccionDeProvincia(ChangeEventArgs e)
+    {
+        var idProvincia = int.Parse(e.Value.ToString());
+        _iuDireccion.Id_provincia = idProvincia;
+
+        await jsRuntime.InvokeVoidAsync("LimpiarSelect", "slocalidad", "0");
+
+        if (_iuDireccion.Id_provincia == 0)
+        {
+            _iuDireccion.Id_localidad = 0;
+        }
+        else
+        {
+            _iuDireccion.Id_localidad = 0;
+            await jsRuntime.InvokeVoidAsync("SwalLoading", "Cargando localidades...");
+            _localidades = await Http.GetFromJsonAsync<List<MListaLocalidades>>("api/Global/Listadelocalidades/Provincia/" + idProvincia);
+
+            if (_localidades != null)
+            {
+                await jsRuntime.InvokeVoidAsync("SwalCerrar", "1");
+            }
+        }
+    }
+
+    protected async Task SeleccionDeLocalidad(ChangeEventArgs e)
+    {
+        await jsRuntime.InvokeVoidAsync("SwalLoading");
+        var idLocalidad = int.Parse(e.Value.ToString());
+        _iuDireccion.Id_localidad = idLocalidad;
+        await jsRuntime.InvokeVoidAsync("SwalCerrar", "1");
+    }
+
+    protected async Task EnviarDireccion()
+    {
+        if (_accion == 1)
+        {
+            // Agregar direccion nueva
+            await jsRuntime.InvokeVoidAsync("SwalLoading", "Agregando nueva dirección...");
+            _resultado = null;
+            using var response = await Http.PostAsJsonAsync("api/Personas/Direccion/Agregar", _iuDireccion);
+            _resultado = await response.Content.ReadFromJsonAsync<MRespuestaBoolMensaje>();
+            if (_resultado.resultado == true)
+            {
+                var Confirm1 = await jsRuntime.InvokeAsync<bool>("SwalNormal", "Correcto!", "La dirección se agrego correctamente!", "success", false);
+                if (Confirm1)
+                {
+                    await ModalInstance.CloseAsync();
+                }
+            }
+            else
+            {
+                var Confirm2 = await jsRuntime.InvokeAsync<bool>("SwalNormal", "Oops...", "No se pudo agregar la dirección, ¿intentar nuevamente?", "error", true);
+                if (Confirm2)
+                {
+                    await EnviarDireccion();
+                }
+                else
+                {
+                    await ModalInstance.CloseAsync();
+                }
+            }
+        }
+        else if (_accion == 2)
+        {
+            // Modificar direccion
+            await jsRuntime.InvokeVoidAsync("SwalLoading", "Modificando dirección...");
+            _resultado = null;
+            using var response = await Http.PostAsJsonAsync("api/Personas/Direccion/Modificar", _iuDireccion);
+            _resultado = await response.Content.ReadFromJsonAsync<MRespuestaBoolMensaje>();
+            if (_resultado.resultado == true)
+            {
+                var Confirm1 = await jsRuntime.InvokeAsync<bool>("SwalNormal", "Correcto!", "La dirección se agregó correctamente!", "success", false);
+                if (Confirm1)
+                {
+                    await ModalInstance.CloseAsync();
+                }
+            }
+            else
+            {
+                var Confirm2 = await jsRuntime.InvokeAsync<bool>("SwalNormal", "Oops...", "No se pudo modificar la dirección, ¿intentar nuevamente?", "error", true);
+                if (Confirm2)
+                {
+                    await EnviarDireccion();
+                }
+                else
+                {
+                    await ModalInstance.CloseAsync();
+                }
+            }
+        }
+        else
+        {
+            // Ninguna accion
+            var Confirm1 = await jsRuntime.InvokeAsync<bool>("SwalNormal", "Error!", "No se pudo completar la acción solicitada!", "warning", false);
+            if (Confirm1)
+            {
+                await ModalInstance.CloseAsync();
+            }
+        }
+    }
+
+    void CerrarModalEditar()
+    {
+        ModalInstance.CloseAsync(ModalResult.Cancel());
+    }
+}

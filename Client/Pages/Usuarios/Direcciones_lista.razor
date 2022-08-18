@@ -1,0 +1,616 @@
+﻿@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@layout NuevoLayout
+@inject IJSRuntime jsRuntime
+@using System.Security.Claims
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject HttpClient Http
+@using AutenticacionBlazor.Shared.Modelos.Personas
+@using AutenticacionBlazor.Shared.Modelos.Global
+@using AutenticacionBlazor.Shared.Modelos.Personas.Fisica
+@using AutenticacionBlazor.Shared.Modelos.Personas.Juridica
+@attribute [Authorize(Roles = "super,general")]
+@inject NavigationManager NavigationManager
+@inject Blazored.LocalStorage.ISyncLocalStorageService localStorage
+@inject IModalService Modal
+
+<AuthorizeView>
+    <Authorized>
+        @if (_direcciones == null)
+        {
+            <div class="row">
+                <div class="col-12">
+                    <div class="spinner spinner-track spinner-primary spinner-lg mr-15" style="margin-left: 43%;"></div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="card card-custom gutter-b">
+                <div class="card-header border-0 py-5">
+                    <h3 class="card-title align-items-start flex-column">
+                        <span class="card-label font-weight-bolder text-dark font-size-h2 pt-2">Mis direcciones</span>
+                    </h3>
+                    <div class="card-toolbar">
+                        <button type="button" class="btn btn-success btn-block mr-3" @onclick="() => DireccionAgregar()">
+                            <span class="svg-icon svg-icon-md svg-icon-white">
+                                <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="24px" height="24px" viewBox="0 0 24 24" version="1.1">
+                                    <g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+                                        <rect x="0" y="0" width="24" height="24" />
+                                        <circle fill="#000000" opacity="0.3" cx="12" cy="12" r="10" />
+                                        <path d="M11,11 L11,7 C11,6.44771525 11.4477153,6 12,6 C12.5522847,6 13,6.44771525 13,7 L13,11 L17,11 C17.5522847,11 18,11.4477153 18,12 C18,12.5522847 17.5522847,13 17,13 L13,13 L13,17 C13,17.5522847 12.5522847,18 12,18 C11.4477153,18 11,17.5522847 11,17 L11,13 L7,13 C6.44771525,13 6,12.5522847 6,12 C6,11.4477153 6.44771525,11 7,11 L11,11 Z" fill="#000000" />
+                                    </g>
+                                </svg>
+                            </span>Agregar dirección
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            @if (_personafisica != null)
+            {
+                <div class="card rounded border p-10">
+                    <h3 class="card-title align-items-start flex-column pb-5">
+                        <span class="card-label font-weight-bolder text-dark font-size-h2">Persona física</span>
+                    </h3>
+                    <table class="table border border-gray-300 table-row-bordered table-row-gray-300 gy-7 gs-7">
+                        <thead>
+                            <tr class="fw-boldest table-dark text-white">
+                                <th class="align-middle text-nowrap text-light py-3" scope="col"></th>
+                                <th class="align-middle text-nowrap text-light py-3" scope="col">Cuit</th>
+                                <th class="align-middle text-nowrap text-light py-3" scope="col">Apellido</th>
+                                <th class="align-middle text-nowrap text-light py-3" scope="col">Nombre</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            <tr data-bs-toggle="collapse" data-bs-target="#AC-@(_personafisica.Cuit)" class="collapse-row collapsed">
+                                <td class="align-middle text-nowrap py-3">
+                                    <div class="collapsible toggle mb-0 collapsed" data-bs-toggle="collapse" data-bs-target="#AC-@(_personafisica.Cuit)" aria-expanded="false">
+                                        <div class="btn btn-sm btn-icon mw-20px btn-active-color-primary me-5">
+                                            <span class="svg-icon toggle-on svg-icon-primary svg-icon-1">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                                    <rect opacity="0.3" x="2" y="2" width="20" height="20" rx="5" fill="black"></rect>
+                                                    <rect x="6.0104" y="10.9247" width="12" height="2" rx="1" fill="black"></rect>
+                                                </svg>
+                                            </span>
+                                            <span class="svg-icon toggle-off svg-icon-1">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                                    <rect opacity="0.3" x="2" y="2" width="20" height="20" rx="5" fill="black"></rect>
+                                                    <rect x="10.8891" y="17.8033" width="12" height="2" rx="1" transform="rotate(-90 10.8891 17.8033)" fill="black"></rect>
+                                                    <rect x="6.01041" y="10.9247" width="12" height="2" rx="1" fill="black"></rect>
+                                                </svg>
+                                            </span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="align-middle text-nowrap py-3">@(_personafisica.Cuit)</td>
+                                <td class="align-middle text-nowrap py-3">@(_personafisica.Apellido)</td>
+                                <td class="align-middle text-nowrap py-3">@(_personafisica.Nombre)</td>
+                            </tr>
+                            <tr>
+                                <td colspan="4">
+                                    <div id="AC-@(_personafisica.Cuit)" class="collapse">
+                                        <table id="table-data-pf-dir" class="table border border-gray-300 table-row-bordered table-row-gray-300 table-hover gy-7 gs-7">
+                                            <thead>
+                                                <tr class="fw-boldest text-dark table-primary">
+                                                    <th class="align-middle text-center text-nowrap py-3" scope="col" style="width: 1%;">Acciones</th>
+                                                    <th class="align-middle text-nowrap py-3" scope="col">Tipo de dirección</th>
+                                                    <th class="align-middle text-nowrap py-3" scope="col">Calle</th>
+                                                    <th class="align-middle text-nowrap py-3" scope="col">Número</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var d in _direcciones)
+                                                {
+                                                    <tr>
+                                                        <td class="align-middle text-nowrap py-3">
+                                                            <div role="group">
+                                                                <button type="button"
+                                                                        class="btn btn-icon btn-info btn-sm me-1"
+                                                                        id="info_drawer_@(d.Id_direccion)_@(d.Id_persona_direccion)_@(d.Id_persona)"
+                                                                        title="Ver información">
+                                                                    <!--begin::Svg Icon | path: icons/duotune/art/art005.svg-->
+                                                                    <span class="svg-icon svg-icon-3">
+                                                                        <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="24px" height="24px" viewBox="0 0 24 24" version="1.1">
+                                                                            <g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+                                                                                <rect x="0" y="0" width="24" height="24" />
+                                                                                <circle fill="#000000" opacity="0.3" cx="12" cy="12" r="10" />
+                                                                                <rect fill="#000000" x="11" y="10" width="2" height="7" rx="1" />
+                                                                                <rect fill="#000000" x="11" y="7" width="2" height="2" rx="1" />
+                                                                            </g>
+                                                                        </svg>
+                                                                    </span>
+                                                                    <!--end::Svg Icon-->
+                                                                </button>
+                                                                <button type="button"
+                                                                        class="btn btn-icon btn-primary btn-sm me-1"
+                                                                        title="Modificar dirección"
+                                                                        @onclick="() => DireccionEditar(d)">
+                                                                    <!--begin::Svg Icon | path: icons/duotune/art/art005.svg-->
+                                                                    <span class="svg-icon svg-icon-3">
+                                                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                                                            <path opacity="0.3" d="M21.4 8.35303L19.241 10.511L13.485 4.755L15.643 2.59595C16.0248 2.21423 16.5426 1.99988 17.0825 1.99988C17.6224 1.99988 18.1402 2.21423 18.522 2.59595L21.4 5.474C21.7817 5.85581 21.9962 6.37355 21.9962 6.91345C21.9962 7.45335 21.7817 7.97122 21.4 8.35303ZM3.68699 21.932L9.88699 19.865L4.13099 14.109L2.06399 20.309C1.98815 20.5354 1.97703 20.7787 2.03189 21.0111C2.08674 21.2436 2.2054 21.4561 2.37449 21.6248C2.54359 21.7934 2.75641 21.9115 2.989 21.9658C3.22158 22.0201 3.4647 22.0084 3.69099 21.932H3.68699Z" fill="black"></path>
+                                                                            <path d="M5.574 21.3L3.692 21.928C3.46591 22.0032 3.22334 22.0141 2.99144 21.9594C2.75954 21.9046 2.54744 21.7864 2.3789 21.6179C2.21036 21.4495 2.09202 21.2375 2.03711 21.0056C1.9822 20.7737 1.99289 20.5312 2.06799 20.3051L2.696 18.422L5.574 21.3ZM4.13499 14.105L9.891 19.861L19.245 10.507L13.489 4.75098L4.13499 14.105Z" fill="black"></path>
+                                                                        </svg>
+                                                                    </span>
+                                                                    <!--end::Svg Icon-->
+                                                                </button>
+                                                                <button type="button"
+                                                                        class="btn btn-icon btn-danger btn-sm me-1"
+                                                                        title="Borrar"
+                                                                        @onclick="() => DireccionEliminar(d)">
+                                                                    <!--begin::Svg Icon | path: icons/duotune/art/art005.svg-->
+                                                                    <span class="svg-icon svg-icon-3">
+                                                                        <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="24px" height="24px" viewBox="0 0 24 24" version="1.1">
+                                                                            <g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+                                                                                <rect x="0" y="0" width="24" height="24" />
+                                                                                <path d="M6,8 L18,8 L17.106535,19.6150447 C17.04642,20.3965405 16.3947578,21 15.6109533,21 L8.38904671,21 C7.60524225,21 6.95358004,20.3965405 6.89346498,19.6150447 L6,8 Z M8,10 L8.45438229,14.0894406 L15.5517885,14.0339036 L16,10 L8,10 Z" fill="#000000" fill-rule="nonzero" />
+                                                                                <path d="M14,4.5 L14,3.5 C14,3.22385763 13.7761424,3 13.5,3 L10.5,3 C10.2238576,3 10,3.22385763 10,3.5 L10,4.5 L5.5,4.5 C5.22385763,4.5 5,4.72385763 5,5 L5,5.5 C5,5.77614237 5.22385763,6 5.5,6 L18.5,6 C18.7761424,6 19,5.77614237 19,5.5 L19,5 C19,4.72385763 18.7761424,4.5 18.5,4.5 L14,4.5 Z" fill="#000000" opacity="0.3" />
+                                                                            </g>
+                                                                        </svg>
+                                                                    </span>
+                                                                    <!--end::Svg Icon-->
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                        <td class="align-middle text-nowrap py-3">@(d.Tipo_direccion)</td>
+                                                        <td class="align-middle text-nowrap py-3">@(d.Nombre_calle)</td>
+                                                        <td class="align-middle text-nowrap py-3">@(d.Numero)</td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            }
+            @if (_listaPersonaJuridica != null)
+            {
+                <div class="card rounded border p-10">
+                    <h3 class="card-title align-items-start flex-column pb-5">
+                        <span class="card-label font-weight-bolder text-dark font-size-h2">Persona jurídica</span>
+                    </h3>
+                    <table class="table border border-gray-300 table-row-bordered table-row-gray-300 gy-7 gs-7">
+                        <thead>
+                            <tr class="fw-boldest table-dark text-white">
+                                <th class="align-middle text-nowrap text-light py-3" scope="col"></th>
+                                <th class="align-middle text-nowrap text-light py-3" scope="col">Cuit</th>
+                                <th class="align-middle text-nowrap text-light py-3" scope="col">Nombre legal</th>
+                                <th class="align-middle text-nowrap text-light py-3" scope="col">Nombre de fantasía</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var x in _listaPersonaJuridica)
+                            {
+                                <tr data-bs-toggle="collapse" data-bs-target="#ACpj-@(x.Uid_persona_juridica)-@(x.Cuit)" class="collapse-row collapsed">
+                                    <td class="align-middle text-nowrap py-3">
+                                        <div class="collapsible toggle mb-0 collapsed" data-bs-toggle="collapse" data-bs-target="#ACpj-@(x.Uid_persona_juridica)-@(x.Cuit)" aria-expanded="false">
+                                            <div class="btn btn-sm btn-icon mw-20px btn-active-color-primary me-5">
+                                                <span class="svg-icon toggle-on svg-icon-primary svg-icon-1">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                                        <rect opacity="0.3" x="2" y="2" width="20" height="20" rx="5" fill="black"></rect>
+                                                        <rect x="6.0104" y="10.9247" width="12" height="2" rx="1" fill="black"></rect>
+                                                    </svg>
+                                                </span>
+                                                <span class="svg-icon toggle-off svg-icon-1">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                                        <rect opacity="0.3" x="2" y="2" width="20" height="20" rx="5" fill="black"></rect>
+                                                        <rect x="10.8891" y="17.8033" width="12" height="2" rx="1" transform="rotate(-90 10.8891 17.8033)" fill="black"></rect>
+                                                        <rect x="6.01041" y="10.9247" width="12" height="2" rx="1" fill="black"></rect>
+                                                    </svg>
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="align-middle text-nowrap py-3">@(x.Cuit)</td>
+                                    <td class="align-middle text-nowrap py-3">@(x.Nombre_legal)</td>
+                                    <td class="align-middle text-nowrap py-3">@(x.Nombre_fantasia)</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="4">
+                                        <div id="ACpj-@(x.Uid_persona_juridica)-@(x.Cuit)" class="collapse">
+                                            @if (_direccionesPersonaJuridica.Any(a => a.Id_persona == x.Uid_persona_juridica))
+                                            {
+                                                <table id="table-data-pj-dir" class="table border border-gray-300 table-row-bordered table-row-gray-300 table-hover gy-7 gs-7">
+                                                    <thead>
+                                                        <tr class="fw-boldest text-dark table-primary">
+                                                            <th class="align-middle text-center text-nowrap py-3" scope="col" style="width: 1%;">Acciones</th>
+                                                            <th class="align-middle text-nowrap py-3" scope="col">Tipo de dirección</th>
+                                                            <th class="align-middle text-nowrap py-3" scope="col">Calle</th>
+                                                            <th class="align-middle text-nowrap py-3" scope="col">Número</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        @foreach (var d in _direccionesPersonaJuridica)
+                                                        {
+                                                            @if (x.Uid_persona_juridica == d.Id_persona)
+                                                            {
+                                                                <tr>
+                                                                    <td class="align-middle text-nowrap py-3">
+                                                                        <div role="group">
+                                                                            <button type="button"
+                                                                                    class="btn btn-icon btn-info btn-sm me-1 ctooltip"
+                                                                                    id="info_drawer_@(d.Id_direccion)_@(d.Id_persona_direccion)_@(d.Id_persona)"
+                                                                                    data-bs-toggle="tooltip"
+                                                                                    data-bs-dismiss="click"
+                                                                                    data-bs-custom-class="tooltip-dark"
+                                                                                    data-bs-placement="top"
+                                                                                    title="Ver información">
+                                                                                <!--begin::Svg Icon | path: icons/duotune/art/art005.svg-->
+                                                                                <span class="svg-icon svg-icon-3">
+                                                                                    <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="24px" height="24px" viewBox="0 0 24 24" version="1.1">
+                                                                                        <g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+                                                                                            <rect x="0" y="0" width="24" height="24" />
+                                                                                            <circle fill="#000000" opacity="0.3" cx="12" cy="12" r="10" />
+                                                                                            <rect fill="#000000" x="11" y="10" width="2" height="7" rx="1" />
+                                                                                            <rect fill="#000000" x="11" y="7" width="2" height="2" rx="1" />
+                                                                                        </g>
+                                                                                    </svg>
+                                                                                </span>
+                                                                                <!--end::Svg Icon-->
+                                                                            </button>
+                                                                            <button type="button"
+                                                                                    class="btn btn-icon btn-primary btn-sm me-1 ctooltip"
+                                                                                    data-bs-toggle="tooltip"
+                                                                                    data-bs-dismiss="click"
+                                                                                    data-bs-custom-class="tooltip-dark"
+                                                                                    data-bs-placement="top"
+                                                                                    title="Modificar dirección"
+                                                                                    @onclick="() => DireccionEditar(d)">
+                                                                                <!--begin::Svg Icon | path: icons/duotune/art/art005.svg-->
+                                                                                <span class="svg-icon svg-icon-3">
+                                                                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                                                                        <path opacity="0.3" d="M21.4 8.35303L19.241 10.511L13.485 4.755L15.643 2.59595C16.0248 2.21423 16.5426 1.99988 17.0825 1.99988C17.6224 1.99988 18.1402 2.21423 18.522 2.59595L21.4 5.474C21.7817 5.85581 21.9962 6.37355 21.9962 6.91345C21.9962 7.45335 21.7817 7.97122 21.4 8.35303ZM3.68699 21.932L9.88699 19.865L4.13099 14.109L2.06399 20.309C1.98815 20.5354 1.97703 20.7787 2.03189 21.0111C2.08674 21.2436 2.2054 21.4561 2.37449 21.6248C2.54359 21.7934 2.75641 21.9115 2.989 21.9658C3.22158 22.0201 3.4647 22.0084 3.69099 21.932H3.68699Z" fill="black"></path>
+                                                                                        <path d="M5.574 21.3L3.692 21.928C3.46591 22.0032 3.22334 22.0141 2.99144 21.9594C2.75954 21.9046 2.54744 21.7864 2.3789 21.6179C2.21036 21.4495 2.09202 21.2375 2.03711 21.0056C1.9822 20.7737 1.99289 20.5312 2.06799 20.3051L2.696 18.422L5.574 21.3ZM4.13499 14.105L9.891 19.861L19.245 10.507L13.489 4.75098L4.13499 14.105Z" fill="black"></path>
+                                                                                    </svg>
+                                                                                </span>
+                                                                                <!--end::Svg Icon-->
+                                                                            </button>
+                                                                            <button type="button"
+                                                                                    class="btn btn-icon btn-danger btn-sm me-1 ctooltip"
+                                                                                    data-bs-toggle="tooltip"
+                                                                                    data-bs-dismiss="click"
+                                                                                    data-bs-custom-class="tooltip-dark"
+                                                                                    data-bs-placement="top"
+                                                                                    title="Borrar"
+                                                                                    @onclick="() => DireccionEliminar(d)">
+                                                                                <!--begin::Svg Icon | path: icons/duotune/art/art005.svg-->
+                                                                                <span class="svg-icon svg-icon-3">
+                                                                                    <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="24px" height="24px" viewBox="0 0 24 24" version="1.1">
+                                                                                        <g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+                                                                                            <rect x="0" y="0" width="24" height="24" />
+                                                                                            <path d="M6,8 L18,8 L17.106535,19.6150447 C17.04642,20.3965405 16.3947578,21 15.6109533,21 L8.38904671,21 C7.60524225,21 6.95358004,20.3965405 6.89346498,19.6150447 L6,8 Z M8,10 L8.45438229,14.0894406 L15.5517885,14.0339036 L16,10 L8,10 Z" fill="#000000" fill-rule="nonzero" />
+                                                                                            <path d="M14,4.5 L14,3.5 C14,3.22385763 13.7761424,3 13.5,3 L10.5,3 C10.2238576,3 10,3.22385763 10,3.5 L10,4.5 L5.5,4.5 C5.22385763,4.5 5,4.72385763 5,5 L5,5.5 C5,5.77614237 5.22385763,6 5.5,6 L18.5,6 C18.7761424,6 19,5.77614237 19,5.5 L19,5 C19,4.72385763 18.7761424,4.5 18.5,4.5 L14,4.5 Z" fill="#000000" opacity="0.3" />
+                                                                                        </g>
+                                                                                    </svg>
+                                                                                </span>
+                                                                                <!--end::Svg Icon-->
+                                                                            </button>
+                                                                        </div>
+                                                                    </td>
+                                                                    <td class="align-middle text-nowrap py-3">@(d.Tipo_direccion)</td>
+                                                                    <td class="align-middle text-nowrap py-3">@(d.Nombre_calle)</td>
+                                                                    <td class="align-middle text-nowrap py-3">@(d.Numero)</td>
+                                                                </tr>
+                                                            }
+                                                        }
+                                                    </tbody>
+                                                </table>
+                                            }
+                                            else
+                                            {
+                                                <div class="alert alert-danger d-flex align-items-center p-5 mb-10">
+                                                    <span class="svg-icon svg-icon-2hx svg-icon-danger me-4">
+                                                        <i class="bi bi-exclamation-triangle text-danger fs-2hx"></i>
+                                                    </span>
+                                                    <div class="d-flex flex-column">
+                                                        <h4 class="mb-1 text-danger">Aviso!</h4>
+                                                        <span>Esta persona no tiene cargada direcciones.</span>
+                                                    </div>
+                                                </div>
+                                            }
+
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+
+            @foreach (var d in _direcciones.Concat(_direccionesPersonaJuridica))
+            {
+                <div id="drawer_@(d.Id_direccion)_@(d.Id_persona_direccion)_@(d.Id_persona)"
+                     class="bg-white"
+                     data-kt-drawer="true"
+                     data-kt-drawer-activate="true"
+                     data-kt-drawer-toggle="#info_drawer_@(d.Id_direccion)_@(d.Id_persona_direccion)_@(d.Id_persona)"
+                     data-kt-drawer-close="#info_drawer_close"
+                     data-kt-drawer-overlay="true"
+                     data-kt-drawer-width="{default:'300px', 'md': '500px'}">
+                    <div class="card w-100 rounded-0">
+                        <div class="card-header pe-5">
+                            <div class="card-title">
+                                <div class="d-flex justify-content-center flex-column me-3">
+                                    <a href="#" class="fs-4 fw-bolder text-gray-900 text-hover-primary me-1 lh-1">Detalle de dirección</a>
+                                </div>
+                            </div>
+                            <div class="card-toolbar">
+                                <div class="btn btn-sm btn-icon btn-active-light-primary" id="info_drawer_close">
+                                    <span class="svg-icon svg-icon-2">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                            <rect opacity="0.5" x="6" y="17.3137" width="16" height="2" rx="1" transform="rotate(-45 6 17.3137)" fill="black" />
+                                            <rect x="7.41422" y="6" width="16" height="2" rx="1" transform="rotate(45 7.41422 6)" fill="black" />
+                                        </svg>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body hover-scroll-overlay-y">
+                            <div class="row">
+                                <div class="col-xl-12 pb-4">
+                                    <div class="fw-bold fs-7 text-gray-600 mb-1">Tipo de dirección:</div>
+                                    <div class="fw-bolder fs-6 text-gray-800">@(d.Tipo_direccion)</div>
+                                </div>
+                                <div class="separator separator-dashed"></div>
+                                <div class="col-xl-12 pt-4 pb-4">
+                                    <div class="fw-bold fs-7 text-gray-600 mb-1">Código postal:</div>
+                                    <div class="fw-bolder fs-6 text-gray-800">@(d.Codigo_postal)</div>
+                                </div>
+                                <div class="separator separator-dashed"></div>
+                                <div class="col-xl-12">
+                                    <div class="fw-bold fs-7 text-gray-600 mb-1">Calle:</div>
+                                    <div class="fw-bolder fs-6 text-gray-800">@(d.Nombre_calle)</div>
+                                </div>
+                                <div class="separator separator-dashed"></div>
+                                <div class="col-xl-12 pt-4 pb-4">
+                                    <div class="fw-bold fs-7 text-gray-600 mb-1">Número:</div>
+                                    <div class="fw-bolder fs-6 text-gray-800">@(d.Numero)</div>
+                                </div>
+                                <div class="separator separator-dashed"></div>
+                                <div class="col-xl-12 pt-4 pb-4">
+                                    <div class="fw-bold fs-7 text-gray-600 mb-1">Piso:</div>
+                                    <div class="fw-bolder fs-6 text-gray-800">@(d.Piso)</div>
+                                </div>
+                                <div class="separator separator-dashed"></div>
+                                <div class="col-xl-12 pt-4 pb-4">
+                                    <div class="fw-bold fs-7 text-gray-600 mb-1">Departamento:</div>
+                                    <div class="fw-bolder fs-6 text-gray-800">@(d.Departamento)</div>
+                                </div>
+                                <div class="separator separator-dashed"></div>
+                                <div class="col-xl-12 pt-4 pb-4">
+                                    <div class="fw-bold fs-7 text-gray-600 mb-1">Sector:</div>
+                                    <div class="fw-bolder fs-6 text-gray-800">@(d.Sector)</div>
+                                </div>
+                                <div class="separator separator-dashed"></div>
+                                <div class="col-xl-12 pt-4 pb-4">
+                                    <div class="fw-bold fs-7 text-gray-600 mb-1">Manzana:</div>
+                                    <div class="fw-bolder fs-6 text-gray-800">@(d.Manzana)</div>
+                                </div>
+                                <div class="separator separator-dashed"></div>
+                                <div class="col-xl-12 pt-4 pb-4">
+                                    <div class="fw-bold fs-7 text-gray-600 mb-1">Lote:</div>
+                                    <div class="fw-bolder fs-6 text-gray-800">@(d.Lote)</div>
+                                </div>
+                                <div class="separator separator-dashed"></div>
+                                <div class="col-xl-12 pt-4 pb-4">
+                                    <div class="fw-bold fs-7 text-gray-600 mb-1">Pais:</div>
+                                    <div class="fw-bolder fs-6 text-gray-800">@(d.Pais)</div>
+                                </div>
+                                <div class="separator separator-dashed"></div>
+                                <div class="col-xl-12 pt-4 pb-4">
+                                    <div class="fw-bold fs-7 text-gray-600 mb-1">Provincia:</div>
+                                    <div class="fw-bolder fs-6 text-gray-800">@(d.Provincia)</div>
+                                </div>
+                                <div class="separator separator-dashed"></div>
+                                <div class="col-xl-12 pt-4">
+                                    <div class="fw-bold fs-7 text-gray-600 mb-1">Localidad:</div>
+                                    <div class="fw-bolder fs-6 text-gray-800">@(d.Localidad)</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+    </Authorized>
+    <NotAuthorized>
+        <p>&nbsp;</p>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private string id_identity;
+    private List<MMisDirecciones> _direcciones;
+    private List<MMisDirecciones> _direccionesPersonaJuridica;
+    private List<MListaPaises> _paises;
+    private List<MListaProvincias> _provincias;
+    private List<MListaLocalidades> _localidades;
+    private List<MListaTipoDirecciones> _tipodirecciones;
+
+    private MPersonaFisicaGet _personafisica;
+    private List<MPersonaJuridicaGet> _listaPersonaJuridica;
+
+    private List<MListPersonasDirecciones> _listaPersonas = new List<MListPersonasDirecciones>();
+
+    public async Task Recargardirecciones()
+    {
+        await CargarDatos();
+        await InvokeAsync(() => { StateHasChanged(); });
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var userAuth = authState.User;
+        id_identity = authState.User.Claims.ToList().FirstOrDefault(x => x.Type == "sub").Value;
+        await CargarDatos();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await jsRuntime.InvokeVoidAsync("ListaDirecciones");
+    }
+
+    protected async Task CargarDatos()
+    {
+
+        await jsRuntime.InvokeVoidAsync("SwalLoading");
+        _personafisica = await Http.GetFromJsonAsync<MPersonaFisicaGet>("api/PersonaFisica/Informacion");
+        _listaPersonaJuridica = await Http.GetFromJsonAsync<List<MPersonaJuridicaGet>>("api/PersonaJuridica/ListaMisPersonasJuridicas");
+        _direcciones = await Http.GetFromJsonAsync<List<MMisDirecciones>>("api/Personas/Direccion/Lista");
+        _direccionesPersonaJuridica = await Http.GetFromJsonAsync<List<MMisDirecciones>>("api/PersonaJuridica/Direccion/Lista");
+
+        if (_direcciones != null)
+        {
+            await jsRuntime.InvokeVoidAsync("SwalCerrar", "2");
+        }
+
+        if (_direccionesPersonaJuridica != null)
+        {
+            await jsRuntime.InvokeVoidAsync("SwalCerrar", "2");
+        }
+
+        if (_personafisica != null)
+        {
+            _listaPersonas.Add(new MListPersonasDirecciones { Id = _personafisica.Uid_persona, Informacion = _personafisica.Apellido + " " + _personafisica.Nombre });
+        }
+
+        if (_listaPersonaJuridica != null)
+        {
+            foreach (var pj in _listaPersonaJuridica)
+            {
+                _listaPersonas.Add(new MListPersonasDirecciones { Id = pj.Uid_persona_juridica, Informacion = pj.Nombre_legal + " " + pj.Nombre_fantasia });
+            }
+        }
+    }
+
+    protected async Task DireccionEliminar(MMisDirecciones todo)
+    {
+        /*await QuitarDataTable();
+
+        string ApiPath = "api/Personas/Direccion/Borrar/";
+        var parameters = new ModalParameters();
+        parameters.Add(nameof(Global.ModalEliminar.modelo), todo);
+        parameters.Add(nameof(Global.ModalEliminar.apiPath), ApiPath);
+
+        var options = new ModalOptions()
+        {
+            HideCloseButton = true
+        };
+        var myModal = Modal.Show<Global.ModalEliminar>(null, parameters, options);
+        var result = await myModal.Result;
+
+        if (result.Cancelled)
+        {
+            Console.WriteLine("Modal was cancelled");
+            await CargarDataTable();
+        }
+        else
+        {
+            await CargarDatos();
+            await CargarDataTable();
+        }*/
+
+        await jsRuntime.InvokeVoidAsync("SwalLoading");
+
+        var parameters = new ModalParameters();
+        parameters.Add(nameof(Usuarios.Direcciones_eliminar._bajaDireccion), todo);
+        var options = new ModalOptions()
+        {
+            DisableBackgroundCancel = true,
+            UseCustomLayout = true,
+            ContentScrollable = true
+        };
+        var usuarioModal = Modal.Show<Usuarios.Direcciones_eliminar>("Eliminar de dirección", parameters, options);
+        var result = await usuarioModal.Result;
+        if (result.Cancelled)
+        {
+            Console.WriteLine("Modal was cancelled");
+        }
+        else
+        {
+            await CargarDatos();
+        }
+
+    }
+
+    protected async Task DireccionEditar(MMisDirecciones todo)
+    {
+        await jsRuntime.InvokeVoidAsync("SwalLoading");
+        _tipodirecciones = await Http.GetFromJsonAsync<List<MListaTipoDirecciones>>("api/Global/Tipodedireciones");
+        _paises = await Http.GetFromJsonAsync<List<MListaPaises>>("api/Global/Listadepaises");
+        _provincias = await Http.GetFromJsonAsync<List<MListaProvincias>>("api/Global/Listadeprovincias/Pais/" + todo.Id_pais);
+        _localidades = await Http.GetFromJsonAsync<List<MListaLocalidades>>("api/Global/Listadelocalidades/Provincia/" + todo.Id_provincia);
+
+        var parameters = new ModalParameters();
+        parameters.Add(nameof(Usuarios.Direcciones_agregareditar._accion), 2);
+        parameters.Add(nameof(Usuarios.Direcciones_agregareditar._modificarDireccion), todo);
+        parameters.Add(nameof(Usuarios.Direcciones_agregareditar._tipodirecciones), _tipodirecciones);
+        parameters.Add(nameof(Usuarios.Direcciones_agregareditar._paises), _paises);
+        parameters.Add(nameof(Usuarios.Direcciones_agregareditar._provincias), _provincias);
+        parameters.Add(nameof(Usuarios.Direcciones_agregareditar._localidades), _localidades);
+        parameters.Add(nameof(Usuarios.Direcciones_agregareditar._listaPersonas), _listaPersonas);
+        var options = new ModalOptions()
+        {
+            DisableBackgroundCancel = true,
+            UseCustomLayout = true,
+            ContentScrollable = true
+        };
+        var usuarioModal = Modal.Show<Usuarios.Direcciones_agregareditar>("Modificar de dirección", parameters, options);
+        var result = await usuarioModal.Result;
+        if (result.Cancelled)
+        {
+            Console.WriteLine("Modal was cancelled");
+        }
+        else
+        {
+            await CargarDatos();
+        }
+    }
+
+    protected async Task DireccionAgregar()
+    {
+        await jsRuntime.InvokeVoidAsync("SwalLoading");
+        _tipodirecciones = await Http.GetFromJsonAsync<List<MListaTipoDirecciones>>("api/Global/Tipodedireciones");
+        _paises = await Http.GetFromJsonAsync<List<MListaPaises>>("api/Global/Listadepaises");
+
+        var parameters = new ModalParameters();
+        parameters.Add(nameof(Usuarios.Direcciones_agregareditar._accion), 1);
+        parameters.Add(nameof(Usuarios.Direcciones_agregareditar._tipodirecciones), _tipodirecciones);
+        parameters.Add(nameof(Usuarios.Direcciones_agregareditar._paises), _paises);
+        parameters.Add(nameof(Usuarios.Direcciones_agregareditar._listaPersonas), _listaPersonas);
+        var options = new ModalOptions()
+        {
+            DisableBackgroundCancel = true,
+            UseCustomLayout = true,
+            ContentScrollable = true
+        };
+        var usuarioModal = Modal.Show<Usuarios.Direcciones_agregareditar>("Agregar dirección", parameters, options);
+        var result = await usuarioModal.Result;
+        if (result.Cancelled)
+        {
+            Console.WriteLine("Modal was cancelled");
+        }
+        else
+        {
+            await CargarDatos();
+        }
+    }
+
+    protected async Task QuitarDataTable()
+    {
+        await jsRuntime.InvokeVoidAsync("QuitarDataTable", "table-data-pf-dir");
+        await jsRuntime.InvokeVoidAsync("QuitarDataTable", "table-data-pj-dir");
+    }
+    protected async Task CargarDataTable()
+    {
+        await jsRuntime.InvokeVoidAsync("CargarDataTable", "table-data-pf-dir");
+        await jsRuntime.InvokeVoidAsync("QuitarDataTable", "table-data-pj-dir");
+    }
+}

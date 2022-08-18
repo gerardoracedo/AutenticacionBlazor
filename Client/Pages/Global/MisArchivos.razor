@@ -1,0 +1,47 @@
+﻿@page "/Archivos"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@layout NuevoLayout
+@inject IJSRuntime jsRuntime
+@using System.Security.Claims
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject HttpClient Http
+@using AutenticacionBlazor.Shared.Modelos.Personas.Fisica
+@using System
+@using System.IO
+@using Microsoft.AspNetCore.Hosting
+@using Microsoft.Extensions.Logging
+
+<h3>Cargar Archivos</h3>
+
+
+
+<p>
+    <div class="col-lg-12">
+        <label>Foto frente</label>
+        <button type="button" class="btn btn-secondary my-2 me-5" data-bs-toggle="popover" data-bs-placement="right" title="Popover on right" data-bs-content="jajaja">
+            ¿Cual es?
+        </button>
+        <InputFile OnChange="OnInputFileChange" class="form-control" multiple />
+    </div>
+    <div class="col-lg-12">
+        <label>Foto reverso</label>
+        <InputFile OnChange="OnInputFileChange" class="form-control" multiple />
+    </div>
+    <br /><br />
+</p>
+
+
+
+@code{
+    IReadOnlyList<IBrowserFile> selectedFiles;
+    string Message = "No file(s) selected";
+
+    private void OnInputFileChange(InputFileChangeEventArgs e)
+    {
+        selectedFiles = e.GetMultipleFiles();
+        Message = $"{selectedFiles.Count} file(s) selected";
+        this.StateHasChanged();
+    }
+
+}

@@ -1,0 +1,49 @@
+@page "/authentication/{action}"
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@inject NavigationManager navigationManager
+
+<RemoteAuthenticatorView Action="@Action">
+    <LogInFailed>
+        @{ navigationManager.NavigateTo("/"); }
+    </LogInFailed>
+    <LogOut>
+        <div class="page-loader page-loader-base">
+            <div class="blockui">
+                <span>Cerrando sesion.&nbsp;&nbsp;<spam class="spinner spinner-primary"></spam></span>
+            </div>
+        </div>
+    </LogOut>
+    <LogOutSucceeded>
+        @{ navigationManager.NavigateTo("/"); }
+    </LogOutSucceeded>
+    <LoggingIn>
+        <div class="page-loader page-loader-base">
+            <div class="blockui">
+                <span>Verificando inicio de sesion.&nbsp;&nbsp;<spam class="spinner spinner-primary"></spam></span>
+            </div>
+        </div>
+    </LoggingIn>
+    <CompletingLoggingIn>
+        @{ navigationManager.NavigateTo("/"); }
+    </CompletingLoggingIn>
+</RemoteAuthenticatorView>
+<div id="Autorizando1" style="background-color: #fff !important;">
+    <div id="Autorizando2">
+        <div class="Autorizando3">
+            <div class="row">
+                <div class="col-12 mb-10">
+                    <center><img src="images/Login-YB.png" /></center>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-12">
+                    <center><img src="/images/Preloader_3.gif" /></center>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code{
+    [Parameter] public string Action { get; set; }
+}

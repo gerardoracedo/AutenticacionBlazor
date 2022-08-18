@@ -1,0 +1,403 @@
+﻿@page "/Comercio/Agregarddjj"
+@layout NuevoLayout
+@using Microsoft.AspNetCore.Authorization
+@using AutenticacionBlazor.Shared.Modelos.Rentas.Comercio
+@using AutenticacionBlazor.Shared.Modelos.Global
+@inject HttpClient Http
+@using System.Text.RegularExpressions
+@using System.ComponentModel.DataAnnotations
+@using AutenticacionBlazor.Shared.Modelos.Personas.Fisica
+@using AutenticacionBlazor.Shared.Modelos.Personas.Juridica
+@using Microsoft.AspNetCore.Components.Web.Virtualization
+@using System.Collections.Generic
+@using System.Globalization
+
+@if (_formSelect == true)
+{
+<MudPaper Style="position:relative;" Class="pt-4 pb-5">
+    <MudText Typo="Typo.h4" Class="ma-4 ml-6">Agregar Declaracion jurada</MudText>
+    <MudContainer>
+        <MudForm @ref="form" @bind-IsValid="@success">
+            <MudGrid>
+                <MudItem xs="4">
+                    <MudSelect 
+                        T="MListaPersonas" 
+                        Label="Persona" 
+                        MultiSelection="false" 
+                        @bind-Value="Persona" 
+                        Required="true" 
+                        RequiredError="Persona"
+                        Variant="Variant.Outlined" 
+                        AnchorOrigin="Origin.BottomCenter">
+                        @foreach (var state in _persona)
+                        {
+                            <MudSelectItem T="MListaPersonas" Value="@state">@state.Cadena</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                
+                <MudItem xs="4">
+                    <MudSelect 
+                        T="MListaPeriodosFiscales" 
+                        Label="Periodos" 
+                        MultiSelection="false" 
+                        @bind-Value="@Periodo" 
+                        Required="true" 
+                        RequiredError="Periodos"
+                        Variant="Variant.Outlined" 
+                        AnchorOrigin="Origin.BottomCenter">
+                        @foreach (var perd in _listaPeriodos)
+                        {
+                            <MudSelectItem T="MListaPeriodosFiscales" Value="@perd">@perd.Descripcion - @perd.Vencimiento.Value.ToShortDateString()</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+
+                <MudItem xs="4" Class="align-self-center">
+                    <MudButton Variant="Variant.Filled" Size="Size.Large" Color="Color.Tertiary" FullWidth="true" Disabled="@(!success)" OnClick="@(async () => await BusquedaUno())">
+                        @if (_processing)
+                        {
+                            <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                            <MudText Class="ms-2">Procesando</MudText>
+                        }
+                        else
+                        {
+                            <MudText>Buscar</MudText>
+                        }
+                    </MudButton>
+                </MudItem>
+
+            </MudGrid>
+
+        </MudForm>
+
+    </MudContainer>
+    <MudOverlay Visible="isVisible" DarkBackground="true" Absolute="true">
+        <MudProgressCircular Color="Color.Secondary" Indeterminate="true" />
+    </MudOverlay>
+</MudPaper>
+}
+
+@if (_formActividades == true)
+{
+    <MudPaper Style="position:relative;" Class="pt-4 pb-5 mb-6">
+        <center>
+            <MudText Typo="Typo.h6" Class="ma-4 ml-6">
+                Carga de @resultado.mensaje para el periodo @Periodo.Descripcion
+            </MudText>
+            <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Tertiary" FullWidth="false" OnClick="@(async () => CambiarSeleccion())">
+                <MudText>Cambiar seleccion</MudText>
+            </MudButton>
+        </center>
+    </MudPaper>
+    <br />
+    <MudExpansionPanels>
+        @foreach(var a in _actividadesPersonas.GroupBy(x => x.Id_direccion))
+        {
+                <MudExpansionPanel>
+                    <TitleContent>
+                        <MudText>
+                            <strong>
+                                @(a.First().Nombre_calle +" ("+a.First().Numero_calle+") - "+a.First().Localidad+" ("+a.First().Codigo_postal+") - "+a.First().Provincia+" - "+a.First().Pais)
+                            </strong>
+                        </MudText>
+                    </TitleContent>
+                    <ChildContent>
+                        @foreach(var b in _actividadesPersonas)
+                        {
+                            @if(a.First().Id_direccion == b.Id_direccion)
+                            {
+                                <MudSimpleTable Style="overflow-x: auto;" Bordered="true" Class="mb-5">
+                                    <thead>
+                                        <tr>
+                                            <th><strong>Descripcion</strong></th>
+                                            <th><strong>Alicuota</strong></th>
+                                            <th><strong>Publicidad y propaganda</strong></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>@b.Descripcion</td>
+                                            <td>@b.Alicuota</td>
+                                            <td>
+                                            @if (b.Publicidad_y_propaganda)
+                                            {
+                                                <span>Si</span>
+                                            }
+                                            else
+                                            {
+                                                <span>No</span>
+                                            }
+                                        </td>
+                                        </tr>
+                                        <tr>
+                                            <td colspan="3">
+                                                <MudGrid>
+                                                    <MudItem xs="4">
+                                                        <MudTextField 
+                                                            @bind-Value="@b.Monto_imponible" 
+                                                            Label="Monto Imponible" 
+                                                            HelperText="Monto a declarar" 
+                                                            Variant="Variant.Outlined" 
+                                                            Culture="@CultureInfo.CreateSpecificCulture("es-AR")"
+                                                            Format="N2"
+                                                            OnBlur="@(async () => CalculoTotal())"
+                                                            OnKeyUp="@(async () => CalculoTotal())"
+                                                            Adornment="Adornment.Start" 
+                                                            AdornmentIcon="@Icons.Material.Filled.AttachMoney" 
+                                                            AdornmentColor="Color.Warning" />
+                                                    </MudItem>
+                                                    <MudItem xs="4">
+                                                        <MudTextField 
+                                                            Value="@(b.Importe_publicidad_y_propaganda = CalcularPyP(b.Monto_imponible, Convert.ToDouble(b.Alicuota.Replace(".",",")), @b.Publicidad_y_propaganda))"
+                                                            Label="Publicidad y propaganda" 
+                                                            HelperText="@(_pyp + "% del calculo Monto Imp. x Alicuota")"
+                                                            Variant="Variant.Outlined" 
+                                                            Culture="@CultureInfo.CreateSpecificCulture("es-AR")"
+                                                            Format="N2"
+                                                            OnBlur="@(async () => CalculoTotal())"
+                                                            OnKeyUp="@(async () => CalculoTotal())"
+                                                            Adornment="Adornment.Start" 
+                                                            AdornmentIcon="@Icons.Material.Filled.AttachMoney" 
+                                                            AdornmentColor="Color.Warning"
+                                                            ReadOnly="true"
+                                                            Disabled="true" />
+                                                    </MudItem>
+                                                    <MudItem xs="4">
+                                                        <MudTextField 
+                                                            Value="@(b.SubTotal = CalcularSubtotal(b.Monto_imponible, Convert.ToDouble(b.Alicuota.Replace(".",",")), @b.Publicidad_y_propaganda))"
+                                                            Label="Sub total" 
+                                                            HelperText="Monto Imp. x Alicuota + Pub. y Prop." 
+                                                            Variant="Variant.Outlined" 
+                                                            Culture="@CultureInfo.CreateSpecificCulture("es-AR")"
+                                                            Format="N2"
+                                                            OnBlur="@(async () => CalculoTotal())"
+                                                            OnKeyUp="@(async () => CalculoTotal())"
+                                                            Adornment="Adornment.Start" 
+                                                            AdornmentIcon="@Icons.Material.Filled.AttachMoney" 
+                                                            AdornmentColor="Color.Warning"
+                                                            ReadOnly="true"
+                                                            Disabled="true" />
+                                                    </MudItem>
+                                                </MudGrid>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </MudSimpleTable>
+                            }
+                        }
+                    </ChildContent>
+                    
+                </MudExpansionPanel>
+        }
+    </MudExpansionPanels>
+    <br />
+    <MudPaper Style="position:relative;" Class="pt-4 pb-5 mb-6">
+        <MudContainer>
+            <MudGrid>
+                <MudItem xs="8">
+                    <MudText Align="Align.Right" Typo="Typo.h5">
+                        Minimo : 
+                    </MudText>
+                </MudItem>
+                <MudItem xs="4">
+                    <MudText Align="Align.Right" Typo="Typo.h5">
+                        $ @string.Format(new System.Globalization.CultureInfo("es-AR"), "{0:N2}", @Math.Round(@_InformacionComercioPersona.Importe, 2))
+                    </MudText>
+                </MudItem>
+
+                <MudItem xs="8">
+                    <MudText Align="Align.Right" Typo="Typo.h5">
+                        Total publicidad y propaganda : 
+                    </MudText>
+                </MudItem>
+                <MudItem xs="4">
+                    <MudText Align="Align.Right" Typo="Typo.h5">
+                        $ @string.Format(new System.Globalization.CultureInfo("es-AR"), "{0:N2}", @Math.Round(@_actividadesPersonas.Sum(item => item.Importe_publicidad_y_propaganda),2))
+                    </MudText>
+                </MudItem>
+
+                <MudItem xs="8">
+                    <MudText Align="Align.Right" Typo="Typo.h5">
+                        Total del tributo : 
+                    </MudText>
+                </MudItem>
+                <MudItem xs="4">
+                    <MudText Align="Align.Right" Typo="Typo.h5">
+                        $ @string.Format(new System.Globalization.CultureInfo("es-AR"), "{0:N2}", @Math.Round(@_actividadesPersonas.Sum(item => item.SubTotal),2))
+                    </MudText>
+                </MudItem>
+
+                <MudItem xs="8">
+                    
+                </MudItem>
+                <MudItem xs="4">
+                    <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Save" Size="Size.Large" Color="Color.Info" FullWidth="true">
+                        Continuar
+                    </MudButton>
+                </MudItem>
+            </MudGrid>
+        </MudContainer>
+    </MudPaper>
+    @_actividadesPersonas.Sum(item => item.Importe_publicidad_y_propaganda)
+}
+
+@code {
+    [Inject] ISnackbar Snackbar { get; set; }
+    MudForm form;
+
+    
+    private bool success;
+    private bool _processing = false;
+    private bool isVisible = true;
+    private bool _formSelect = true;
+    private bool _formActividades = false;
+    private double _subTotal { get; set; } = 0;
+    private double _pyp { get; set; } = 10;
+
+    // Dialog
+    private bool DialogSubTotal;
+    void CerrarDialogSubTotal() => DialogSubTotal = false;
+    private DialogOptions dialogOptions = new() { FullWidth = true };
+
+    private MListaPeriodosFiscales Periodo;
+    private MListaPersonas Persona;
+    private MDdjj_ver_carga _ddjj_ver = new MDdjj_ver_carga();
+    private MRespuestaBoolMensaje resultado = new MRespuestaBoolMensaje();
+    private MBuscarPeriodoFiscal _buscarPeriodos = new MBuscarPeriodoFiscal();
+    private List<MListaPeriodosFiscales> _listaPeriodos = new List<MListaPeriodosFiscales>();
+    private MPersonaFisicaGet _personaFisica;
+    private List<MPersonaJuridicaGet> _personaJuridica;
+    private List<MListaPersonas> _persona = new List<MListaPersonas>();
+    private List<MDdjj_actividades> _actividadesPersonas = new List<MDdjj_actividades>();
+    private MDdjj_InformacionPersona _InformacionComercioPersona;
+
+    public class MListaPersonas
+    {
+        public int Id { get; set; }
+        public string Nombre { get; set; }
+        public string Apellido { get; set; }
+        public string Cuit { get; set; }
+        public string Cadena { get; set; }
+    }
+
+    private void CalculoTotal()
+    {
+        StateHasChanged();
+    }
+
+    public double CalcularSubtotal(double montoimponible, double alicuota, bool pyp)
+    {
+        var subTotalSinPyP = (montoimponible * alicuota / 100);
+        var subTotalConPyP = (subTotalSinPyP * _pyp / 100) + subTotalSinPyP;
+        if(pyp == true)
+        {
+            return Convert.ToDouble(subTotalConPyP);
+        }
+        else
+        {
+            return Convert.ToDouble(subTotalSinPyP);
+        }
+    }
+
+    public double CalcularPyP(double montoimponible, double alicuota, bool pyp)
+    {
+        var subTotalSinPyP = 0;
+        var subTotalConPyP = ((montoimponible * alicuota / 100) * _pyp / 100);
+        if(pyp == true)
+        {
+            return Convert.ToDouble(subTotalConPyP);
+        }
+        else
+        {
+            return Convert.ToDouble(subTotalSinPyP);
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        _buscarPeriodos.Tipo_periodo = 3;
+
+        _personaFisica = await Http.GetFromJsonAsync<MPersonaFisicaGet>("api/PersonaFisica/Informacion");
+        _personaJuridica = await Http.GetFromJsonAsync<List<MPersonaJuridicaGet>>("api/PersonaJuridica/ListaMisPersonasJuridicas");
+
+        if (_personaFisica != null)
+        {
+            _persona.Add(new MListaPersonas() { 
+                Id = _personaFisica.Uid_persona, 
+                Nombre = _personaFisica.Nombre, 
+                Apellido = _personaFisica.Apellido, 
+                Cuit = _personaFisica.Cuit, 
+                Cadena = _personaFisica.Cuit + " - " + _personaFisica.Nombre + " " + _personaFisica.Apellido 
+            });
+        }
+
+        if (_personaJuridica != null)
+        {
+            foreach (var p in _personaJuridica)
+            {
+                _persona.Add(new MListaPersonas() { 
+                    Id = p.Uid_persona_juridica, 
+                    Nombre = p.Nombre_legal, 
+                    Apellido = p.Nombre_fantasia, 
+                    Cuit = p.Cuit, 
+                    Cadena = p.Cuit + " - " + p.Nombre_legal + " " + p.Nombre_fantasia 
+                });
+            }
+        }
+
+        using var response = await Http.PostAsJsonAsync("api/Global/ListaPeriodoFiscal", _buscarPeriodos);
+        _listaPeriodos = await response.Content.ReadFromJsonAsync<List<MListaPeriodosFiscales>>();
+
+        if (_listaPeriodos != null && _persona != null)
+        {
+            isVisible = false;
+        }
+
+    }
+
+    private async Task BusquedaUno()
+    {
+        await form.Validate();
+
+        if (form.IsValid)
+        {
+            _ddjj_ver.Periodo = Periodo.Uid_periodo;
+            _ddjj_ver.Persona = Persona.Id;
+            _processing = true;
+            success = false;
+            _InformacionComercioPersona = await Http.GetFromJsonAsync<MDdjj_InformacionPersona>("api/Comercio/Actividades/Persona/Informacion");
+
+            using var response = await Http.PostAsJsonAsync("api/Comercio/Ddjj/Agregar/Ver", _ddjj_ver);
+            resultado = await response.Content.ReadFromJsonAsync<MRespuestaBoolMensaje>();
+            if (resultado.resultado == true)
+            {
+                _actividadesPersonas = await Http.GetFromJsonAsync<List<MDdjj_actividades>>("api/Comercio/Actividades/Persona/"+Periodo.Periodo);
+                if (_actividadesPersonas != null)
+                {
+                    _formSelect = false;
+                    _formActividades = true;
+                }
+                Snackbar.Add(resultado.mensaje, Severity.Success);
+                _processing = false;
+                success = true;
+            }
+            else
+            {
+                Snackbar.Add(resultado.mensaje, Severity.Error);
+                _processing = false;
+                success = true;
+            }
+            Console.WriteLine(resultado);
+        }
+    }
+
+    void CambiarSeleccion()
+    {
+        _formSelect = true;
+        _formActividades = false;
+        Periodo = null;
+        Persona = null;
+    }
+
+}

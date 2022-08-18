@@ -1,0 +1,44 @@
+﻿@inject NavigationManager NavigationManager
+@inject IJSRuntime jsRuntime
+@using AutenticacionBlazor.Shared.Modelos.Global
+
+<div class="card mb-12">
+    <div class="card-body flex-column p-5">
+        <div class="d-flex align-items-center p-5 p-lg-15">
+            <div class="d-flex flex-column align-items-start justift-content-center flex-equal me-5">
+                <h1 class="fw-bolder fs-4 fs-lg-1 text-gray-800">Menu</h1>
+            </div>
+        </div>
+        <div class="card-rounded bg-light d-flex flex-stack flex-wrap p-5">
+            <ul class="nav flex-wrap border-transparent fw-bolder">
+                @foreach (var x in _NavMenu)
+                {
+                    if(_currenturl == x.Url)
+                    {
+                        <li class="nav-item my-1">
+                            <a href="@(x.Url)" class="btn btn-color-gray-600 btn-active-white btn-active-color-primary fw-boldest fs-8 fs-lg-base nav-link px-3 px-lg-8 mx-1 active">@x.Nombre</a>
+                        </li>
+                    }
+                    else
+                    {
+                        <li class="nav-item my-1">
+                            <a href="@(x.Url)" class="btn btn-color-gray-600 btn-active-white btn-active-color-primary fw-boldest fs-8 fs-lg-base nav-link px-3 px-lg-8 mx-1">@x.Nombre</a>
+                        </li>
+                    }
+                }
+            </ul>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<MUserNavMenu> _NavMenu = new List<MUserNavMenu>();
+    private string _currenturl;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _currenturl = "/"+NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
+        _NavMenu.Add(new MUserNavMenu() { Id = 1, Estado = 1, Nombre = "Mis datos", Url = "/Usuario/Perfil" });
+        _NavMenu.Add(new MUserNavMenu() { Id = 2, Estado = 1, Nombre = "Mis personas juridicas", Url = "/Personas/PersonaJuridica" });
+    }
+}

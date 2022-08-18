@@ -1,0 +1,124 @@
+﻿@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@inject HttpClient Http
+@attribute [Authorize(Roles = "admin, super")]
+@using AutenticacionBlazor.Shared.Modelos.Identity
+@inject NavigationManager NavigationManager
+@using System.Collections
+@using AutenticacionBlazor.Client.Helpers
+@inject IJSRuntime jsRuntime
+
+@if (cargando)
+{
+    <div class="row bg-light">
+        <div class="col-12">
+            <div class="bg-light spinner spinner-track spinner-primary spinner-lg mr-15" style="margin-left: 43%;"></div>
+        </div>
+    </div>
+    <br class="row bg-light" />
+    <div class="row bg-light">
+        <div class="col-12">
+            <p style="margin-left: 43%;"><b>Cargando...</b></p>
+        </div>
+    </div>
+}
+@if (aspnetuser == null)
+{
+    <p><b>Cargando...</b></p>
+}
+else
+{
+    <div><b>Usuario: </b></div>
+    <div><i>@aspnetuser.Email</i></div>
+    <div><b>Roles: </b></div>
+    <ul>
+        @foreach (var userRol in userRoles)
+        {
+            <li>@userRol.RoleName</li>
+        }
+    </ul>
+    <br />
+    <EditForm Model=@aspnetuser OnValidSubmit=@FormSubmitted>
+        <DataAnnotationsValidator />
+        <p><b>Asignar Roles: </b></p>
+        <SelectorMultiple Seleccionados="Seleccionados" NoSeleccionados="NoSeleccionados"></SelectorMultiple>
+        <br />
+        @*<ValidationSummary />*@
+        <div style="display:flex;flex-direction:row;align-items:center;justify-content:space-evenly;">
+            <button type="submit" class="btn btn-primary">Aceptar</button>
+            <button class="btn btn-secondary" @onclick="Cancel">Cancelar</button>
+        </div>
+    </EditForm>
+}
+
+@code
+{
+    private bool cargando = false;
+    [CascadingParameter] BlazoredModalInstance ModalInstance { get; set; }
+    [Parameter] public MAspNetUsers aspnetuser { get; set; }
+    [Parameter] public MAspNetRoles[] roles { get; set; }
+    [Parameter] public MAspNetRoles[] userRoles { get; set; }
+    [Parameter] public MAspNetRoles[] notUserRoles { get; set; }
+
+    [Parameter] public List<MAspNetRoles> RolesSeleccionados { get; set; } = new List<MAspNetRoles>();
+    [Parameter] public List<MAspNetRoles> RolesNoSeleccionados { get; set; } = new List<MAspNetRoles>();
+    private List<MSelectorMultiple> Seleccionados { get; set; } = new List<MSelectorMultiple>();
+    private List<MSelectorMultiple> NoSeleccionados { get; set; } = new List<MSelectorMultiple>();
+
+    protected override void OnInitialized()
+    {
+        RolesSeleccionados = userRoles.ToList();
+        RolesNoSeleccionados = notUserRoles.ToList();
+
+        Seleccionados = RolesSeleccionados.Select(x => new MSelectorMultiple(x.RoleId.ToString(), x.RoleName)).ToList();
+        NoSeleccionados = RolesNoSeleccionados.Select(x => new MSelectorMultiple(x.RoleId.ToString(), x.RoleName)).ToList();
+    }
+
+    protected async Task FormSubmitted()
+    {
+        try
+        {
+            await DeleteNoSeleccionados();
+            await InsertSeleccionados();
+            await ModalInstance.CloseAsync(ModalResult.Ok<MAspNetUsers>(aspnetuser));
+            await jsRuntime.InvokeAsync<bool>("SwalNormal", "Correcto!", "Rol/es actualizado/s correctamente.", "success", false);
+        }
+        catch
+        {
+            await jsRuntime.InvokeAsync<bool>("SwalNormal", "Oops...", "No fue posible actualizar el/los rol/es.", "error", true);
+            Cancel();
+        }
+    }
+
+    void Cancel()
+    {
+        ModalInstance.CloseAsync();
+    }
+
+    protected async Task DeleteNoSeleccionados()
+    {
+        cargando = true;
+        foreach (var notsel in NoSeleccionados)
+        {
+            if ((Array.Exists(userRoles, element => element.RoleId == notsel.Llave)))
+            {
+                await Http.PostAsJsonAsync("api/User/RemoveRoleFromUser/" + notsel.Llave, aspnetuser);
+            }
+        }
+        cargando = false;
+    }
+
+    protected async Task InsertSeleccionados()
+    {
+        cargando = true;
+        foreach (var sel in Seleccionados)
+        {
+            if (!(Array.Exists(userRoles, element => element.RoleId == sel.Llave)))
+            {
+                await Http.PostAsJsonAsync("api/User/AssignRoleToUser/" + sel.Llave, aspnetuser);
+            }
+        }
+        cargando = false;
+    }
+}
+

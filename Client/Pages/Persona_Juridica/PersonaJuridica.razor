@@ -1,0 +1,257 @@
+﻿@using Microsoft.AspNetCore.Authorization
+@using System.Net.Http
+@using Microsoft.AspNetCore.HttpOverrides
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@inject HttpClient Http
+@using AutenticacionBlazor.Shared.Modelos.Personas.Juridica
+@using AutenticacionBlazor.Shared.Modelos.Global
+@inject NavigationManager NavigationManager
+@inject IModalService Modal
+@layout MainLayout
+@using Newtonsoft.Json
+@inject Blazored.LocalStorage.ISyncLocalStorageService localStorage
+@inject IJSRuntime jsRuntime
+
+@if (personas_juridicas == null)
+{
+    <div class="row">
+        <div class="col-12">
+            <div class="spinner spinner-track spinner-primary spinner-lg mr-15" style="margin-left: 49%;"></div>
+        </div>
+    </div>
+}
+else
+{
+    if (personas_juridicas == null)
+    {
+        <p style="color:red">Aún no hay personas cargadas</p>
+    }
+    else
+    {
+        <div class="card card-custom gutter-b">
+            <div class="card-header border-0 py-5">
+                <h3 class="card-title align-items-start flex-column">
+                    <span class="card-label font-weight-bolder text-dark font-size-h2 pt-2">Personas Jurídicas</span>
+                </h3>
+                <div class="card-toolbar">
+                    <div @onclick="AltaPersonaJuridica" class="btn btn-success font-weight-bolder font-size-sm">
+                        <span class="svg-icon svg-icon-md svg-icon-white">
+                            <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="24px" height="24px" viewBox="0 0 24 24" version="1.1">
+                                <g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+                                    <rect x="0" y="0" width="24" height="24" />
+                                    <circle fill="#000000" opacity="0.3" cx="12" cy="12" r="10" />
+                                    <path d="M11,11 L11,7 C11,6.44771525 11.4477153,6 12,6 C12.5522847,6 13,6.44771525 13,7 L13,11 L17,11 C17.5522847,11 18,11.4477153 18,12 C18,12.5522847 17.5522847,13 17,13 L13,13 L13,17 C13,17.5522847 12.5522847,18 12,18 C11.4477153,18 11,17.5522847 11,17 L11,13 L7,13 C6.44771525,13 6,12.5522847 6,12 C6,11.4477153 6.44771525,11 7,11 L11,11 Z" fill="#000000" />
+                                </g>
+                            </svg>
+                        </span>Agregar Persona
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card rounded border p-10">
+            <div class="table-responsive">
+                <table id="table-data-persona-juridica" class="table table-striped table-hover gy-7 gs-7">
+                    <thead class="bg-dark">
+                        <tr class="fw-boldest fs-6 text-gray-800">
+                            <th class="align-middle text-nowrap text-light py-3" scope="col">#</th>
+                            <th class="align-middle text-nowrap text-light py-3" scope="col">Nombre Fantasía</th>
+                            <th class="align-middle text-nowrap text-light py-3" scope="col">Nombre Legal</th>
+                            <th class="align-middle text-nowrap text-light py-3" scope="col">Cuit</th>
+                            <th class="align-middle text-nowrap text-light py-3" scope="col">País</th>
+                            <th class="align-middle text-nowrap text-light py-3" scope="col">Tipo Sociedad</th>
+                            <th class="align-middle text-nowrap text-light py-3" scope="col">Rol</th>
+                            <th class="align-middle text-nowrap text-light text-center py-3" scope="col">Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var pj in personas_juridicas)
+                        {
+                            <tr>
+                                <td class="align-middle text-nowrap py-3">
+                                    <div class="btn-group" role="group">
+                                        @if (pj.Estado == 1)
+                                        {
+                                            <button type="button"
+                                                    class="btn btn-icon btn-primary btn-sm me-1 ctooltip"
+                                                    data-bs-toggle="tooltip"
+                                                    data-bs-custom-class="tooltip-dark"
+                                                    data-bs-placement="top"
+                                                    title="Modificar"
+                                                    @onclick="@(() => EditarDatosPersonaJuridica(pj))">
+                                                <!--begin::Svg Icon | path: icons/duotune/art/art005.svg-->
+                                                <span class="svg-icon svg-icon-3">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                                        <path opacity="0.3" d="M21.4 8.35303L19.241 10.511L13.485 4.755L15.643 2.59595C16.0248 2.21423 16.5426 1.99988 17.0825 1.99988C17.6224 1.99988 18.1402 2.21423 18.522 2.59595L21.4 5.474C21.7817 5.85581 21.9962 6.37355 21.9962 6.91345C21.9962 7.45335 21.7817 7.97122 21.4 8.35303ZM3.68699 21.932L9.88699 19.865L4.13099 14.109L2.06399 20.309C1.98815 20.5354 1.97703 20.7787 2.03189 21.0111C2.08674 21.2436 2.2054 21.4561 2.37449 21.6248C2.54359 21.7934 2.75641 21.9115 2.989 21.9658C3.22158 22.0201 3.4647 22.0084 3.69099 21.932H3.68699Z" fill="black"></path>
+                                                        <path d="M5.574 21.3L3.692 21.928C3.46591 22.0032 3.22334 22.0141 2.99144 21.9594C2.75954 21.9046 2.54744 21.7864 2.3789 21.6179C2.21036 21.4495 2.09202 21.2375 2.03711 21.0056C1.9822 20.7737 1.99289 20.5312 2.06799 20.3051L2.696 18.422L5.574 21.3ZM4.13499 14.105L9.891 19.861L19.245 10.507L13.489 4.75098L4.13499 14.105Z" fill="black"></path>
+                                                    </svg>
+                                                </span>
+                                                <!--end::Svg Icon-->
+                                            </button>
+                                        }
+                                        else if (pj.Estado == 2)
+                                        {
+                                            <button type="button"
+                                                    class="btn btn-icon btn-info btn-sm me-1 ctooltip"
+                                                    data-bs-toggle="tooltip"
+                                                    data-bs-custom-class="tooltip-dark"
+                                                    data-bs-placement="top"
+                                                    title="Ver tramite">
+                                                <span class="svg-icon svg-icon-3">
+                                                    <!--begin::Svg Icon | path:/var/www/preview.keenthemes.com/metronic/releases/2021-05-14-112058/theme/html/demo1/dist/../src/media/svg/icons/Communication/Chat6.svg--><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="24px" height="24px" viewBox="0 0 24 24" version="1.1">
+                                                        <g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+                                                            <rect x="0" y="0" width="24" height="24" />
+                                                            <path opacity="0.3" fill-rule="evenodd" clip-rule="evenodd" d="M14.4862 18L12.7975 21.0566C12.5304 21.54 11.922 21.7153 11.4386 21.4483C11.2977 21.3704 11.1777 21.2597 11.0887 21.1255L9.01653 18H5C3.34315 18 2 16.6569 2 15V6C2 4.34315 3.34315 3 5 3H19C20.6569 3 22 4.34315 22 6V15C22 16.6569 20.6569 18 19 18H14.4862Z" fill="black" />
+                                                            <path fill-rule="evenodd" clip-rule="evenodd" d="M6 7H15C15.5523 7 16 7.44772 16 8C16 8.55228 15.5523 9 15 9H6C5.44772 9 5 8.55228 5 8C5 7.44772 5.44772 7 6 7ZM6 11H11C11.5523 11 12 11.4477 12 12C12 12.5523 11.5523 13 11 13H6C5.44772 13 5 12.5523 5 12C5 11.4477 5.44772 11 6 11Z" fill="black" />
+                                                        </g>
+                                                    </svg><!--end::Svg Icon-->
+                                                </span>
+                                            </button>
+                                        }
+                                        else
+                                        {
+
+                                        }
+                                    </div>
+                                </td>
+                                <td class="align-middle text-nowrap py-3">@pj.Nombre_fantasia</td>
+                                <td class="align-middle text-nowrap py-3">@pj.Nombre_legal</td>
+                                <td class="align-middle text-nowrap py-3">@pj.Cuit</td>
+                                <td class="align-middle text-nowrap py-3">@pj.Pais</td>
+                                <td class="align-middle text-nowrap py-3">@pj.Tipo_sociedad</td>
+                                <td class="align-middle text-nowrap py-3">@pj.Rol</td>
+                                <td class="align-middle text-nowrap py-3">
+                                    @if (pj.Estado == 1)
+                                    {
+                                        <span class="badge badge-success">Habilitado</span>
+                                    }
+                                    else if (pj.Estado == 2)
+                                    {
+                                        <span class="badge badge-warning">Pendiente</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge badge-danger">Inactivo</span>
+                                    }
+                                </td>
+
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+}
+
+@code {
+    [Parameter] public int id { get; set; }
+    private IEnumerable<MPersonaJuridicaGet> personas_juridicas;
+    private MPersonaJuridicaGet persona_juridica = new MPersonaJuridicaGet();
+    private List<MListaPaises> paises;
+    private List<MListaTipoSociedad> sociedades;
+    [Parameter] public EventCallback<string> RecargarDirecciones { get; set; }
+
+    private string term = new string("");
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            await CargaDatos();
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            exception.Redirect();
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await jsRuntime.InvokeVoidAsync("ListaPersonaJuridica");
+    }
+
+    protected async Task QuitarDataTable()
+    {
+        await jsRuntime.InvokeVoidAsync("QuitarDataTable", "table-data-persona-juridica");
+    }
+    protected async Task CargarDataTable()
+    {
+        await jsRuntime.InvokeVoidAsync("CargarDataTable", "table-data-persona-juridica");
+    }
+
+    protected async Task CargaDatos()
+    {
+        personas_juridicas = await Http.GetFromJsonAsync<List<MPersonaJuridicaGet>>("api/PersonaJuridica/ListaMisPersonasJuridicas");
+        if (personas_juridicas != null)
+        {
+            await CargarDataTable();
+        }
+    }
+
+    void Cancel()
+    {
+        NavigationManager.NavigateTo("/Personas/PersonaJuridica");
+    }
+
+    public async Task AltaPersonaJuridica()
+    {
+        await jsRuntime.InvokeVoidAsync("SwalLoading");
+        await QuitarDataTable();
+        var parameters = new ModalParameters();
+        var options = new ModalOptions()
+        {
+            DisableBackgroundCancel = true,
+            UseCustomLayout = true,
+            ContentScrollable = true
+        };
+        var pfModal = Modal.Show<Persona_Juridica.PersonaJuridica_alta>("Alta Persona Juridica", parameters, options);
+        var result = await pfModal.Result;
+        if (result.Cancelled)
+        {
+            Console.WriteLine("Modal was cancelled");
+            await CargarDataTable();
+            await jsRuntime.InvokeVoidAsync("SwalCerrar", "2");
+        }
+        else
+        {
+            personas_juridicas = await Http.GetFromJsonAsync<List<MPersonaJuridicaGet>>("api/PersonaJuridica/ListaMisPersonasJuridicas");
+            await CargarDataTable();
+            await RecargarDirecciones.InvokeAsync();
+            await jsRuntime.InvokeVoidAsync("SwalCerrar", "2");
+        }
+    }
+
+    private async Task EditarDatosPersonaJuridica(MPersonaJuridicaGet pj)
+    {
+        await jsRuntime.InvokeVoidAsync("SwalLoading");
+        await QuitarDataTable();
+        paises = await Http.GetFromJsonAsync<List<MListaPaises>>("api/Global/ListaDePaises");
+        sociedades = await Http.GetFromJsonAsync<List<MListaTipoSociedad>>("api/global/Listadesociedades");
+        var parameters = new ModalParameters();
+        var options = new ModalOptions()
+        {
+            DisableBackgroundCancel = true,
+            UseCustomLayout = true,
+            ContentScrollable = true
+        };
+        parameters.Add(nameof(Persona_Juridica.PersonaJuridica_editar._personaJuridica), pj);
+        parameters.Add(nameof(Persona_Juridica.PersonaJuridica_editar.sociedades), sociedades);
+        parameters.Add(nameof(Persona_Juridica.PersonaJuridica_editar.paises), paises);
+        var pfModal = Modal.Show<Persona_Juridica.PersonaJuridica_editar>("Editar Persona Juridica", parameters, options);
+        var result = await pfModal.Result;
+        if (result.Cancelled)
+        {
+            Console.WriteLine("Modal was cancelled");
+            await CargarDataTable();
+            await jsRuntime.InvokeVoidAsync("SwalCerrar", "2");
+        }
+        else
+        {
+            personas_juridicas = await Http.GetFromJsonAsync<List<MPersonaJuridicaGet>>("api/PersonaJuridica/ListaMisPersonasJuridicas");
+            await CargarDataTable();
+            await RecargarDirecciones.InvokeAsync();
+            await jsRuntime.InvokeVoidAsync("SwalCerrar", "2");
+        }
+    }
+
+}

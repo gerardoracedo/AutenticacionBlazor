@@ -1,0 +1,132 @@
+﻿@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@inject HttpClient Http
+@inject IJSRuntime jsRuntime
+@layout NoLayout
+@attribute [Authorize(Roles = "super")]
+@using AutenticacionBlazor.Shared.Modelos.Rentas.Comercio
+@using AutenticacionBlazor.Shared.Modelos.Global
+@inject NavigationManager NavigationManager
+@inject IModalService Modal
+@inject Blazored.LocalStorage.ISyncLocalStorageService localStorage
+@inject IJSRuntime JSRuntime
+
+@if (actividadesUpdate == null)
+{
+    <div class="row">
+        <div class="col-12">
+            <div class="spinner spinner-track spinner-primary spinner-lg mr-15" style="margin-left: 49%;"></div>
+        </div>
+    </div>
+}
+else
+{
+    <EditForm Model=@actividadesUpdate OnValidSubmit=@FormSubmitted>
+        <DataAnnotationsValidator />
+        <div class="col-lg-12">
+            <label>Código:</label>
+            <input @bind="@actividadesUpdate.Codigo" class="form-control" placeholder="Codigo..." readonly disabled/>
+            <span class="form-text text-muted"><ValidationMessage For="@(() => actividadesUpdate.Codigo)" /></span>
+        </div>
+        <div class="col-lg-12">
+            <label>Nombre :</label>
+            <input @bind="@actividadesUpdate.Descripcion" class="form-control" placeholder="Nombre..."/>
+            <span class="form-text text-muted"><ValidationMessage For="@(() => actividadesUpdate.Descripcion)"/></span>
+        </div>
+        <div class="col-lg-12">
+            <label>Fecha Fin:</label>
+            <input @bind="@actividadesUpdate.Fecha_fin" class="form-control datepicker_ym" @onclick="InicioDeActividad" placeholder="Ingrese fecha de fin..." />
+            <span class="form-text text-muted"><ValidationMessage For="@(() => actividadesUpdate.Fecha_fin)" /></span>
+        </div>
+        <br /><br />
+        
+        <br /><br />
+        <div class="row">
+            <div class="col-lg-12" style="display:flex;justify-content:center">
+                <button type="submit" class="btn btn-success mr-2">Guardar</button>
+                <button type="reset" class="btn btn-secondary" @onclick="Cancel">Cancelar</button>
+            </div>
+        </div>
+    </EditForm>
+}
+
+@code
+{
+    [CascadingParameter] BlazoredModalInstance ModalInstance { get; set; }
+    [Parameter] public MListaActividades _actividades { get; set; }
+    bool bandera = false;
+    private MActividadesBaja actividadesUpdate = new MActividadesBaja();
+    private MRespuestaBoolMensaje resultado = new MRespuestaBoolMensaje();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            if (_actividades != null)
+            {
+                actividadesUpdate.Id = _actividades.Id;
+                actividadesUpdate.Codigo = _actividades.Codigo;
+                actividadesUpdate.Descripcion = _actividades.Descripcion;
+                actividadesUpdate.Fecha_fin = _actividades.Fecha_fin;
+
+            }
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            await ModalInstance.CloseAsync();
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await jsRuntime.InvokeVoidAsync("DatePicker_YM");
+    }
+
+    protected async Task BajaActividad()
+    {
+        using var response = await Http.PostAsJsonAsync("api/Comercio/Actividades/Baja", actividadesUpdate);
+        resultado = await response.Content.ReadFromJsonAsync<MRespuestaBoolMensaje>();
+        if (resultado.resultado == true)
+        {
+            var Confirm1 = await jsRuntime.InvokeAsync<bool>("SwalNormal", "Se ha guardo correctamente los datos!", resultado.mensaje, "success", false);
+            if (Confirm1)
+            {
+                await ModalInstance.CloseAsync(ModalResult.Ok<MActividadesBaja>(actividadesUpdate));
+                await jsRuntime.InvokeVoidAsync("SwalCerrar", "2");
+            }
+        }
+        else
+        {
+            var Confirm2 = await jsRuntime.InvokeAsync<bool>("SwalNormal", "Oops...", resultado.mensaje, "error", false);
+            if (Confirm2)
+            {
+                Cancel();
+                await jsRuntime.InvokeVoidAsync("SwalCerrar", "2");
+            }
+        }
+    }
+
+    void Cancel()
+    {
+        ModalInstance.CancelAsync();
+    }
+
+    protected async Task FormSubmitted()
+    {
+        try
+        {
+            await BajaActividad();
+        }
+        catch
+        {
+            Cancel();
+        }
+    }
+
+    protected async Task InicioDeActividad()
+    {
+        var _inicioactividad = await jsRuntime.InvokeAsync<string>("DatePicker_YM");
+        actividadesUpdate.Fecha_fin = _inicioactividad + "-01";
+    }
+
+}

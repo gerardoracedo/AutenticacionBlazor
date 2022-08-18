@@ -1,0 +1,175 @@
+﻿@page "/Comercio/Actividades/MisActividades"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@layout NuevoLayout
+@inject IJSRuntime jsRuntime
+@using System.Security.Claims
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject HttpClient Http
+@inject IModalService Modal
+@using AutenticacionBlazor.Shared.Modelos.Personas
+@attribute [Authorize(Roles = "super,general")]
+@inject NavigationManager NavigationManager
+@inject Blazored.LocalStorage.ISyncLocalStorageService localStorage
+@using AutenticacionBlazor.Shared.Models.Identity
+@using AutenticacionBlazor.Shared.Modelos.Rentas.Comercio
+@using AutenticacionBlazor.Shared.Modelos.Personas.Fisica
+@using AutenticacionBlazor.Shared.Modelos.Personas.Juridica
+
+<AuthorizeView>
+    <Authorized Context="Auth">
+
+        @if (_actividadesPersonas == null)
+        {
+            <div class="row">
+                <div class="col-12">
+                    <div class="spinner spinner-track spinner-primary spinner-lg mr-15" style="margin-left: 43%;"></div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h3 class="card-title fw-boldest">Mis actividades</h3>
+                    <div class="card-toolbar">
+                        <a href="javascript:;" class="btn btn-success" @onclick="Alta"><i class="bi bi-plus-circle"></i> Agregar actividad</a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <table id="table-data-misactividades" class="table table-striped gy-7 gs-7">
+                        <thead>
+                            <tr class="fw-bold fs-6 text-gray-800">
+                                <th>#</th>
+                                <th>Estado</th>
+                                <th>Cuit</th>
+                                <th>Persona</th>
+                                <th>Actividad</th>
+                                <th>Alicuota</th>
+                                <th>Fecha de inicio</th>
+                                <th>Fecha de fin</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var d in _actividadesPersonas)
+                            {
+                                <tr>
+                                    <td>
+
+                                        @if (d.Estado == 1)
+                                        {
+                                            <div class="btn-group" role="group">
+                                                <button type="button"
+                                                        class="btn btn-light-danger btn-active-danger ctooltip"
+                                                        data-bs-toggle="tooltip"
+                                                        data-bs-custom-class="tooltip-dark"
+                                                        data-bs-placement="top"
+                                                        title="Solicitar baja">
+                                                    <i class="bi bi-trash fs-1"></i>
+                                                </button>
+                                            </div>
+                                        }
+                                        else if (d.Estado == 2 || d.Estado == 3)
+                                        {
+                                            <a href="/@(d.Tramite_url+d.Nro_tramite)"
+                                               class="btn btn-light-info btn-active-info ctooltip"
+                                               data-bs-toggle="tooltip"
+                                               data-bs-custom-class="tooltip-dark"
+                                               data-bs-placement="top"
+                                               title="Ver tramite">
+                                                <i class="bi bi-chat-left-text fs-1"></i>
+                                            </a>
+                                        }
+                                    </td>
+                                    <td>
+                                        <span class="@(d.Estado_badge)">@(d.Estado_descripcion)</span>
+                                    </td>
+                                    <td>@(d.Persona_cuit)</td>
+                                    <td>@(d.Persona_apellido_nombre_legal), @(d.Persona_nombre_nombre_fantasia)</td>
+                                    <td>@(d.Actividad_descripcion)</td>
+                                    @if (d.Actividad_alicuota == "EXENTO")
+                                    {
+                                        <td>@(d.Actividad_alicuota)</td>
+                                    }
+                                    else
+                                    {
+                                        <td>@(d.Actividad_alicuota) %</td>
+                                    }
+                                    <td>@(d.Inicio_actividad)</td>
+                                    <td>@(d.Fin_actividad)</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+           
+        }
+    </Authorized>
+    <NotAuthorized>
+        <p>&nbsp;</p>
+    </NotAuthorized>
+</AuthorizeView>
+@code {
+    private string id_identity;
+    private List<MMisActividades> _actividadesPersonas;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var userAuth = authState.User;
+        id_identity = authState.User.Claims.ToList().FirstOrDefault(x => x.Type == "sub").Value;
+
+        await CargarDatos();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await jsRuntime.InvokeVoidAsync("ListaActividadesPersona");
+    }
+
+    protected async Task QuitarDataTable()
+    {
+        await jsRuntime.InvokeVoidAsync("QuitarDataTable", "table-data-misactividades");
+    }
+    protected async Task CargarDataTable()
+    {
+        await jsRuntime.InvokeVoidAsync("CargarDataTable", "table-data-misactividades");
+    }
+
+    protected async Task CargarDatos()
+    {
+        _actividadesPersonas = null;
+        await jsRuntime.InvokeVoidAsync("SwalLoading");
+        _actividadesPersonas = await Http.GetFromJsonAsync<List<MMisActividades>>("api/Comercio/Actividades/Persona/Listar");
+        if (_actividadesPersonas != null)
+        {
+            await CargarDataTable();
+            await jsRuntime.InvokeVoidAsync("SwalCerrar", "2");
+        }
+    }
+
+    public async Task Alta()
+    {
+        await jsRuntime.InvokeVoidAsync("SwalLoading");
+        await QuitarDataTable();
+        var parameters = new ModalParameters();
+        var options = new ModalOptions()
+        {
+            DisableBackgroundCancel = true,
+            UseCustomLayout = true,
+            ContentScrollable = true
+        };
+        var myModal = Modal.Show<Comercio.Actividades.AgregarActividadPersona>("Agregar actividades a persona", parameters, options);
+        var result = await myModal.Result;
+        if (result.Cancelled)
+        {
+            Console.WriteLine("Modal was cancelled");
+            await CargarDataTable();
+        }
+        else
+        {
+            await CargarDatos();
+        }
+    }
+}

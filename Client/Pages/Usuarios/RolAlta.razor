@@ -1,0 +1,81 @@
+﻿@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@inject HttpClient Http
+@attribute [Authorize(Roles = "admin, super")]
+@using AutenticacionBlazor.Shared.Modelos.Global
+@using AutenticacionBlazor.Shared.Modelos.Identity
+@inject NavigationManager NavigationManager
+@inject IJSRuntime jsRuntime
+
+@if (aspnetrole == null)
+{
+    <div class="row">
+        <div class="col-12">
+            <div class="spinner spinner-track spinner-primary spinner-lg mr-15" style="margin-left: 49%;"></div>
+        </div>
+    </div>
+}
+else
+{
+    <EditForm Model=@aspnetrole OnValidSubmit=@FormSubmitted>
+        <DataAnnotationsValidator />
+        <br />
+        <div class="col-lg-12">
+            <label>Nombre del rol: </label>
+            <input @bind="@aspnetrole.RoleName" class="form-control" placeholder="Ej: administrador..." />
+            <span class="form-text text-muted"><ValidationMessage For="@(() => @aspnetrole.RoleName)" /></span>
+        </div>
+        <br /><br /><br />
+        @*<ValidationSummary />*@
+        <div class="row">
+            <div class="col-lg-12" style="display:flex;justify-content:space-around">
+                <button type="submit" class="btn btn-success mr-2">Guardar</button>
+                <button type="reset" class="btn btn-secondary" @onclick="Cancelar">Cancelar</button>
+            </div>
+        </div>
+    </EditForm>
+}
+
+@code {
+    [CascadingParameter] BlazoredModalInstance ModalInstance { get; set; }
+    private MAspNetRoles aspnetrole = new MAspNetRoles();
+    private MRespuestaBoolMensaje resultado = new MRespuestaBoolMensaje();
+
+    protected async Task FormSubmitted()
+    {
+        try
+        {
+            await Alta();
+        }
+        catch (Exception e)
+        {
+            await jsRuntime.InvokeAsync<bool>("SwalNormal", "Oops...", "Algo salió mal", "error", true);
+            Console.WriteLine("No se pudo realizar la consulta.", "Error!" + e);
+            Cancelar();
+        }
+    }
+
+    protected async Task Alta()
+    {
+        using var response = await Http.PostAsJsonAsync("api/User/InsertRole", aspnetrole);
+        resultado = await response.Content.ReadFromJsonAsync<MRespuestaBoolMensaje>();
+        if (resultado.resultado == true)
+        {
+            var Confirm1 = await jsRuntime.InvokeAsync<bool>("SwalNormal", "Correcto!", resultado.mensaje, "success", false);
+            if (Confirm1)
+            {
+                await ModalInstance.CloseAsync(ModalResult.Ok<MAspNetRoles>(aspnetrole));
+            }
+        }
+        else
+        {
+            await jsRuntime.InvokeAsync<bool>("SwalNormal", "Oops...", resultado.mensaje, "error", true);
+            Cancelar();
+        }
+    }
+
+    void Cancelar()
+    {
+        ModalInstance.CancelAsync();
+    }
+}

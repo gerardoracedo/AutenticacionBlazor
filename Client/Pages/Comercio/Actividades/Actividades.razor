@@ -1,0 +1,251 @@
+﻿@page "/Comercio/Actividades"
+@using Microsoft.AspNetCore.Authorization
+@layout NuevoLayout
+@inject IJSRuntime jsRuntime
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject HttpClient Http
+@using AutenticacionBlazor.Shared.Modelos.Personas
+@attribute [Authorize(Roles = "super, Editar_Actividades")]
+@inject NavigationManager NavigationManager
+@inject Blazored.LocalStorage.ISyncLocalStorageService localStorage
+@inject IModalService Modal
+@using AutenticacionBlazor.Shared.Modelos.Rentas.Comercio
+@inject IJSRuntime jsRuntime
+
+<h3>Editar Actividades</h3>
+
+<AuthorizeView>
+    <Authorized>
+
+        @if (_listadeactividades == null)
+        {
+            <div class="row">
+                <div class="col-12">
+                    <div class="spinner spinner-track spinner-primary spinner-lg mr-15" style="margin-left: 49%;"></div>
+                </div>
+            </div>
+        }
+        else
+        {
+            if (_listadeactividades == null)
+            {
+                <p style="color:red">Aún no hay actividades cargadas</p>
+            }
+            else
+            {
+                <div class="card card-custom gutter-b">
+                    <div class="card-header border-0 py-5">
+                        <h3 class="card-title align-items-start flex-column">
+                            <span class="card-label font-weight-bolder text-dark font-size-h2 pt-2">Actividades: </span>
+                        </h3>
+                        <div class="card-toolbar">
+                            <div @onclick="AgregarActividades" class="btn btn-success font-weight-bolder font-size-sm">
+                                <span class="svg-icon svg-icon-md svg-icon-white">
+                                    <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="24px" height="24px" viewBox="0 0 24 24" version="1.1">
+                                        <g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+                                            <rect x="0" y="0" width="24" height="24" />
+                                            <circle fill="#000000" opacity="0.3" cx="12" cy="12" r="10" />
+                                            <path d="M11,11 L11,7 C11,6.44771525 11.4477153,6 12,6 C12.5522847,6 13,6.44771525 13,7 L13,11 L17,11 C17.5522847,11 18,11.4477153 18,12 C18,12.5522847 17.5522847,13 17,13 L13,13 L13,17 C13,17.5522847 12.5522847,18 12,18 C11.4477153,18 11,17.5522847 11,17 L11,13 L7,13 C6.44771525,13 6,12.5522847 6,12 C6,11.4477153 6.44771525,11 7,11 L11,11 Z" fill="#000000" />
+                                        </g>
+                                    </svg>
+                                </span>Agregar Actividad
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table" id="table-data-actividades">
+                                <thead>
+                                    <tr>
+                                        <th>Estado: </th>
+                                        <th>Codigo: </th>
+                                        <th>Nombre: </th>
+                                        <th>Alicuota: </th>
+                                        <th>Fecha inicio: </th>
+                                        <th>Fecha fin: </th>
+                                        <th>Excento: </th>
+                                        <th>Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var act in _listadeactividades)
+                                    {
+                                        <tr>
+                                            <td>
+                                                @if (act.Estado == 0)
+                                                {
+                                                    <div class="btn-group" role="group">
+                                                        <i class="bi bi-trash fs-1">baja</i>
+                                                    </div>
+                                                }
+                                                else if (act.Estado == 2)
+
+                                                {
+                                                    <div>
+                                                        <i class="bi bi-chat-left-text fs-1">pendiente</i>
+                                                    </div>
+                                                }
+                                                else
+                                                {
+                                            <div>
+                                                <i class="bi bi-clock-fill">activo</i>
+                                            </div>
+                                                }
+                                            </td>
+                                            <td>@act.Codigo</td>
+                                            <td>@act.Descripcion</td>
+                                            <td>@act.Alicuota</td>
+                                            <td>@act.Fecha_inicio</td>
+                                            <td>@act.Fecha_fin</td>
+                                            <td>
+                                                @if (act.Excento == 1)
+                                                {
+                                                    <label>SI</label>
+                                                }
+                                                else
+                                                {
+                                                    <label>NO</label>
+                                                }
+                                            </td>
+                                            <td>
+                                                <button type="button"
+                                                        class="btn btn-warning mr-3"
+                                                        @onclick="@(() => EditarActividad(act))">
+                                                    <i class="flaticon2-edit"></i>Editar Datos
+                                                </button>
+                                                <button type="button"
+                                                        class="btn btn-danger"
+                                                        @onclick="@(() => BajaActividad(act))">
+                                                    <i class="flaticon2-trash"></i>Baja Actividad
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            }
+            <br />
+            <br />
+        }
+    </Authorized>
+    <NotAuthorized>
+        <p>&nbsp;</p>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+
+    private List<MListaActividades> _listadeactividades;
+    private List<MListaGrupoActividades> _listadegrupos;
+    private List<MListaSubGrupoActividades> _listadesubgrupos;
+    private List<MMisDirecciones> _direcciones;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await jsRuntime.InvokeVoidAsync("SwalLoading", "Un momento...");
+        await CargarDatos();
+    }
+
+    protected async Task CargarDatos()
+    {
+        await jsRuntime.InvokeVoidAsync("SwalLoading");
+
+        _listadeactividades = await Http.GetFromJsonAsync<List<MListaActividades>>("api/Comercio/Actividades/Lista/Activas");
+        _listadegrupos = await Http.GetFromJsonAsync<List<MListaGrupoActividades>>("api/Comercio/Actividades/Lista/Grupos");
+        _listadesubgrupos = await Http.GetFromJsonAsync<List<MListaSubGrupoActividades>>("api/Comercio/Actividades/Lista/SubGrupos");
+        if (_listadeactividades != null)
+        {
+            await jsRuntime.InvokeVoidAsync("SwalCerrar", "2");
+            await CargarDataTable();
+        }
+
+    }
+
+    public async Task AgregarActividades()
+    {
+        await QuitarDataTable();
+        await jsRuntime.InvokeVoidAsync("SwalLoading");
+        var pfModal = Modal.Show<Comercio.Actividades.Actividades_agregar>("Alta nueva actividad");
+        var result = await pfModal.Result;
+        if (result.Cancelled)
+        {
+            Console.WriteLine("Modal was cancelled");
+            await jsRuntime.InvokeVoidAsync("SwalCerrar", "2");
+            await CargarDataTable();
+        }
+        else
+        {
+
+            _listadeactividades = await Http.GetFromJsonAsync<List<MListaActividades>>("api/Comercio/Actividades/Lista/Activas");
+            await jsRuntime.InvokeVoidAsync("SwalCerrar", "2");
+            await CargarDataTable();
+        }
+    }
+
+    private async Task EditarActividad(MListaActividades actividades)
+    {
+        await QuitarDataTable();
+        var parameter = new ModalParameters();
+        parameter.Add(nameof(Pages.Comercio.Actividades.Actividades_editar._actividades), actividades);
+        var pfModal = Modal.Show<Pages.Comercio.Actividades.Actividades_editar>("Editar Actividad", parameter);
+        var result = await pfModal.Result;
+        if (result.Cancelled)
+        {
+            Console.WriteLine("Modal was cancelled");
+            await CargarDataTable();
+        }
+        else
+        {
+            _listadeactividades = await Http.GetFromJsonAsync<List<MListaActividades>>("api/Comercio/Actividades/Lista/Activas");
+            await CargarDataTable();
+        }
+    }
+
+    private async Task BajaActividad(MListaActividades actividades)
+    {
+        await QuitarDataTable();
+        var parameter = new ModalParameters();
+        parameter.Add(nameof(Pages.Comercio.Actividades.Actividades_baja._actividades), actividades);
+        var pfModal = Modal.Show<Pages.Comercio.Actividades.Actividades_baja>("Baja de Actividad", parameter);
+        var result = await pfModal.Result;
+        if (result.Cancelled)
+        {
+            Console.WriteLine("Modal was cancelled");
+            await CargarDataTable();
+        }
+        else
+        {
+            _listadeactividades = await Http.GetFromJsonAsync<List<MListaActividades>>("api/Comercio/Actividades/Lista/Activas");
+            await CargarDataTable();
+        }
+    }
+
+    void Cancelar()
+    {
+        NavigationManager.NavigateTo("/Comercio/Actividades/MisActividades");
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await jsRuntime.InvokeVoidAsync("SwalLoading", "Un momento...");
+        }
+
+    }
+
+    protected async Task QuitarDataTable()
+    {
+        await jsRuntime.InvokeVoidAsync("QuitarDataTable", "table-data-actividades");
+    }
+    protected async Task CargarDataTable()
+    {
+        await jsRuntime.InvokeVoidAsync("CargarDataTable", "table-data-actividades");
+    }
+
+}

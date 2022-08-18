@@ -1,0 +1,93 @@
+﻿@inject IModalService Modal
+@inject HttpClient Http
+@using AutenticacionBlazor.Shared.Modelos.Global
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@inject IJSRuntime JSRuntime
+@attribute [Authorize(Roles = "admin, super, general")]
+@inject IJSRuntime jsRuntime
+
+<div class="font-weight-bolder text-dark text-center" style="font-size:15px;">¿Estás seguro de eliminar?</div>
+<br />
+<br />
+@if (flag_baja != true)
+{
+    <div class="col-lg-12">
+        <label><b>Motivo baja: </b></label>
+        <input @bind="@motivo_baja" class="form-control" placeholder="Ej: sin uso..." />
+    </div>
+}
+<br />
+<br />
+<div style="display:flex;flex-direction:row;align-items:center;justify-content:space-between;margin:1vw;">
+    <button type="button" class="btn btn-primary" style="margin:1vw;" @onclick="Aceptar">
+        Aceptar
+    </button>
+    <button type="button" class="btn btn-secondary" style="margin:1vw;" @onclick="Cancelar">
+        Cancelar
+    </button>
+</div>
+
+@code
+{
+    [CascadingParameter] BlazoredModalInstance ModalInstance { get; set; }
+    [Parameter] public bool flag { get; set; }
+    [Parameter] public object modelo { get; set; }
+    [Parameter] public string apiPath { get; set; }
+    private MRespuestaBoolMensaje resultado = new MRespuestaBoolMensaje();
+    private string motivo_baja { get; set; }
+    private bool flag_baja { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        flag_baja = flag;
+        await JSRuntime.InvokeVoidAsync("SwalCerrar", "1");
+    }
+
+    protected async Task Aceptar()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("SwalLoading");
+            if (flag_baja == true)
+            {
+                using var response = await Http.PostAsJsonAsync(apiPath, modelo);
+                resultado = await response.Content.ReadFromJsonAsync<MRespuestaBoolMensaje>();
+            }
+            else
+            {
+                if (motivo_baja == null)
+                {
+                    motivo_baja = "sin especificar";
+                }
+                using var response = await Http.PostAsJsonAsync(apiPath + motivo_baja, modelo);
+                resultado = await response.Content.ReadFromJsonAsync<MRespuestaBoolMensaje>();
+            }
+
+            if (resultado.resultado == true)
+            {
+                var Confirm1 = await jsRuntime.InvokeAsync<bool>("SwalNormal", "Correcto!", resultado.mensaje, "success", false);
+                if (Confirm1)
+                {
+                    await ModalInstance.CloseAsync(ModalResult.Ok($"Deleted"));
+                }
+            }
+            else
+            {
+                await jsRuntime.InvokeAsync<bool>("SwalNormal", "Oops...", resultado.mensaje, "error", true);
+                Cancelar();
+            }
+        }
+        catch (Exception e)
+        {
+            await jsRuntime.InvokeAsync<bool>("SwalNormal", "Oops...", "Algo salió mal", "error", true);
+            Console.WriteLine("No pudo realizarse la consulta.", "Error! " + e);
+            Cancelar();
+        }
+    }
+
+    void Cancelar()
+    {
+        ModalInstance.CancelAsync();
+    }
+}

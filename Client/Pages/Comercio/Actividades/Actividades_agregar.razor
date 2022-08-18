@@ -1,0 +1,263 @@
+﻿@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject HttpClient Http
+@inject IJSRuntime jsRuntime
+@using AutenticacionBlazor.Shared.Modelos.Rentas.Comercio
+@using AutenticacionBlazor.Shared.Modelos
+@using AutenticacionBlazor.Shared.Modelos.Personas.Juridica
+@using AutenticacionBlazor.Shared.Modelos.Global
+@using AutenticacionBlazor.Shared.Modelos.Personas.Fisica
+@inject NavigationManager NavigationManager
+@inject IModalService Modal
+@inject IJSRuntime JSRuntime
+@inject SignOutSessionStateManager SignOutManage
+@using Microsoft.AspNetCore.Http
+@inject Blazored.LocalStorage.ISyncLocalStorageService localStorage
+@using Newtonsoft.Json
+@using System.IO
+
+@if (actividad == null)
+{
+    <div class="row">
+        <div class="col-12">
+            <div class="spinner spinner-track spinner-primary spinner-lg mr-15" style="margin-left: 49%;"></div>
+        </div>
+    </div>
+}
+else
+{
+    <EditForm Model=@actividad OnValidSubmit=@FormSubmitted>
+        <DataAnnotationsValidator />
+        <div class="col-lg-12">
+            <label>Codigo:</label>
+            <input @bind="@actividad.Codigo" class="form-control" placeholder="Codigo..." />
+            <span class="form-text text-muted"><ValidationMessage For="@(() => actividad.Codigo)" /></span>
+        </div>
+        <div class="col-lg-12">
+            <label>Descripcion:</label>
+            <input @bind="@actividad.Descripcion" class="form-control" placeholder="Descripcion..." />
+            <span class="form-text text-muted"><ValidationMessage For="@(() => actividad.Descripcion)" /></span>
+        </div>
+        <div class="col-lg-12">
+            <label>Observacion:</label>
+            <input @bind="@actividad.Observacion" class="form-control" placeholder="Observacion... " />
+            <span class="form-text text-muted"><ValidationMessage For="@(() => actividad.Observacion)" /></span>
+        </div>
+        <div class="col-lg-12">
+            <label>Alicuota:</label>
+            <input @bind="@actividad.Alicuota" class="form-control" placeholder="Alicuota..." />
+            <span class="form-text text-muted"><ValidationMessage For="@(() => actividad.Observacion)" /></span>
+        </div>
+        <div class="col-lg-12">
+            <label class="form-label fw-bolder text-gray-900 fs-6">Fecha Inicio:</label>
+            <input @bind="@actividad.Fecha_inicio" class="form-control datepicker_ym" @onclick="InicioDeActividad" placeholder="Fecha ..." />
+            <span class="form-text text-muted"><ValidationMessage For="@(() => actividad.Fecha_inicio)" /></span>
+        </div>
+
+        <div class="mb-10">
+            <label class="form-label">Grupo: </label>
+            <select id="grupo"
+                    class="selectpicker form-control"
+                    data-size="7"
+                    data-live-search="true"
+                    data-container="body"
+                    @onchange="SeleccionDeGrupo">
+                <option value="0" selected>Seleccione una actividad</option>
+                @if (_listadegrupos == null)
+                {
+                    <option value="0" selected disabled>Seleccione una opcion</option>
+                }
+                else
+                {
+                    @foreach (var grupo in _listadegrupos)
+                    {
+                        <option value="@grupo.Id">@grupo.Descripcion</option>
+                    }
+                }
+            </select>
+        </div>
+        <div class="mb-10">
+            <label class="form-label">SubGrupo: </label>
+            <select id="subgrupo"
+                    class="selectpicker form-control"
+                    data-size="7"
+                    data-live-search="true"
+                    data-container="body"
+                    @onchange="SeleccionDeSubGrupo">
+                <option value="0" selected>Seleccione una actividad</option>
+                @if (_listadesubgrupos == null)
+                {
+                    <option value="0" selected>Seleccione una opcion</option>
+                }
+                else
+                {
+                    @foreach (var subgrupo in _listadesubgrupos)
+                    {
+                        <option value="@subgrupo.Id">@subgrupo.Descripcion</option>
+                    }
+                }
+                }
+            </select>
+            <ValidationMessage For="@(() => actividad.Id_subtitulo)" />
+        </div>
+        <br /><br />
+        <div class="fv-row mb-10 form-check">
+            <input id="exento" type="checkbox" @bind="bandera" class="form-check-input" name="exento" @onclick="CheckExento">
+            <label for="exento" class="form-check-label fw-bold ps-2 fs-6">Es Exento?</label>
+        </div>
+        <br /><br />
+        <div class="row">
+            <div class="col-lg-12" style="display:flex;justify-content:center">
+                <button type="submit" class="btn btn-success mr-2">Guardar</button>
+                <button type="reset" class="btn btn-secondary" @onclick="Cancel">Cancelar</button>
+            </div>
+        </div>
+
+    </EditForm>
+}
+
+@code
+{
+    [CascadingParameter] BlazoredModalInstance ModalInstance { get; set; }
+    private MRespuestaBoolMensaje resultado = new MRespuestaBoolMensaje();
+    private List<MListaActividades> _listadeactividades;
+    private List<MListaGrupoActividades> _listadegrupos;
+    private List<MListaSubGrupoActividades> _listadesubgrupos;
+    private MActividadesAlta actividad = new MActividadesAlta();
+    bool bandera = false;
+    string Message = "No file(s) selected";
+    IReadOnlyList<IBrowserFile> selectedFiles;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            await jsRuntime.InvokeVoidAsync("SwalLoading", "Un momento...");
+            await CargaDatos();
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            exception.Redirect();
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await jsRuntime.InvokeVoidAsync("DatePicker_YM");
+    }
+
+    private void OnInputFileChange(InputFileChangeEventArgs e)
+    {
+        selectedFiles = e.GetMultipleFiles();
+        Message = $"{selectedFiles.Count} file(s) selected";
+        this.StateHasChanged();
+    }
+
+    protected async Task CargaDatos()
+    {
+        _listadegrupos = await Http.GetFromJsonAsync<List<MListaGrupoActividades>>("api/Comercio/Actividades/Lista/Grupos");
+        Console.WriteLine($"grupos------------ {JsonConvert.SerializeObject(_listadegrupos)}");
+        _listadesubgrupos = await Http.GetFromJsonAsync<List<MListaSubGrupoActividades>>("api/Comercio/Actividades/Lista/SubGrupos");
+        if (_listadegrupos != null && _listadesubgrupos != null)
+        {
+            await jsRuntime.InvokeVoidAsync("SwalCerrar", "2");
+        }
+    }
+
+    protected async Task AltaActividad()
+    {
+        using var response = await Http.PostAsJsonAsync("api/Comercio/Actividades/Agregar", actividad);
+        resultado = await response.Content.ReadFromJsonAsync<MRespuestaBoolMensaje>();
+        if (resultado.resultado == true)
+        {
+            var Confirm1 = await jsRuntime.InvokeAsync<bool>("SwalNormal", "Se ha guardo correctamente los datos!", resultado.mensaje, "success", false);
+            if (Confirm1)
+            {
+                await ModalInstance.CloseAsync(ModalResult.Ok<MActividadesAlta>(actividad));
+            }
+        }
+        else
+        {
+            var Confirm2 = await jsRuntime.InvokeAsync<bool>("SwalNormal", "Oops...", resultado.mensaje, "error", false);
+            if (Confirm2)
+            {
+                Cancel();
+            }
+        }
+    }
+
+    protected async Task SeleccionDeGrupo(ChangeEventArgs e)
+    {
+        int idtitulo = int.Parse(e.Value.ToString());
+        actividad.Id_subtitulo = idtitulo;
+
+        await jsRuntime.InvokeVoidAsync("LimpiarSelect", "subgrupo", "0");
+
+        if (actividad.Id_subtitulo == 0)
+        {
+            actividad.Id_subtitulo = 0;
+        }
+        else
+        {
+            actividad.Id_subtitulo = 0;
+            await jsRuntime.InvokeVoidAsync("SwalLoading", "Cargando subgrupos...");
+            _listadesubgrupos = await Http.GetFromJsonAsync<List<MListaSubGrupoActividades>>("api/Comercio/ListadeSubtitulos/actividad/" + idtitulo);
+            if (_listadesubgrupos != null)
+            {
+                await jsRuntime.InvokeVoidAsync("SwalCerrar", "1");
+            }
+        }
+    }
+
+    protected async Task SeleccionDeSubGrupo(ChangeEventArgs e)
+    {
+        await jsRuntime.InvokeVoidAsync("SwalLoading");
+        var idSubtitulo = int.Parse(e.Value.ToString());
+        actividad.Id_subtitulo = idSubtitulo;
+        await jsRuntime.InvokeVoidAsync("SwalCerrar", "1");
+    }
+
+    protected async Task FormSubmitted()
+    {
+        try
+        {
+            await AltaActividad();
+            await jsRuntime.InvokeVoidAsync("SwalLoading", "Un momento...");
+
+        }
+        catch
+        {
+            Cancel();
+            await jsRuntime.InvokeVoidAsync("SwalLoading", "Un momento...");
+
+        }
+    }
+
+    protected async Task InicioDeActividad()
+    {
+        var _inicioactividad = await jsRuntime.InvokeAsync<string>("DatePicker_YM");
+        actividad.Fecha_inicio = _inicioactividad + "-01";
+    }
+
+    void Cancel()
+    {
+        ModalInstance.CancelAsync();
+    }
+
+    void CheckExento()
+    {
+        if (bandera)
+        {
+            actividad.Exento = 0;
+            bandera = true;
+        }
+        else
+        {
+
+            actividad.Exento = 1;
+            bandera = false;
+        }
+
+    }
+}

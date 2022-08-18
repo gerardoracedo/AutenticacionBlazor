@@ -1,0 +1,77 @@
+﻿CREATE OR REPLACE FUNCTION global."Assign_oficina_to_user"(identidad text, oficina_asignada integer)
+ RETURNS boolean
+ LANGUAGE plpgsql
+AS $function$
+	BEGIN		
+				
+		INSERT INTO personas."UserOficinas" ("Id_identity", "Id_oficina")
+		VALUES(identidad, oficina_asignada);
+	
+	RETURN FOUND;
+	END;
+$function$
+;
+______________________________________________________________________________________________________
+CREATE OR REPLACE FUNCTION global."Get_not_user_oficinas"(iduser text)
+ RETURNS TABLE(id_oficina integer, oficina character varying)
+ LANGUAGE plpgsql
+AS $function$
+	BEGIN
+	RETURN QUERY 
+
+		SELECT O."Id" AS "Id_Oficina", O."Oficina"
+		FROM global."Global_oficinas" AS O 
+		WHERE O."Id" NOT IN 
+		(SELECT UO."Id_oficina" FROM personas."UserOficinas" AS UO 
+		WHERE UO."Id_identity" = iduser);	
+		
+	END;
+$function$
+;
+______________________________________________________________________________________________________
+CREATE OR REPLACE FUNCTION global."Get_oficinas"()
+ RETURNS TABLE(id_oficina integer, estado integer, oficina character varying, depende integer, codigo character varying, pilar integer)
+ LANGUAGE plpgsql
+AS $function$
+	BEGIN
+	RETURN QUERY
+	
+		SELECT "Id" AS "Id_Oficina", "Estado", "Oficina", "Depende", "Codigo", "Pilar" 
+		FROM global."Global_oficinas"
+		WHERE "Estado" = 1;
+	
+	END;
+$function$
+;
+______________________________________________________________________________________________________
+CREATE OR REPLACE FUNCTION global."Get_user_oficinas"(iduser text)
+ RETURNS TABLE(id_oficina integer, oficina character varying)
+ LANGUAGE plpgsql
+AS $function$
+	BEGIN
+	RETURN QUERY 
+
+		SELECT O."Id" AS "Id_Oficina", O."Oficina"
+		FROM global."Global_oficinas" AS O 
+		JOIN personas."UserOficinas" AS UO 
+		ON O."Id" = UO."Id_oficina" 
+		WHERE UO."Id_identity" = iduser;		
+		
+	END;
+$function$
+;
+______________________________________________________________________________________________________
+CREATE OR REPLACE FUNCTION global."Remove_oficina_from_user"(identidad text, id_oficina integer)
+ RETURNS boolean
+ LANGUAGE plpgsql
+AS $function$
+	BEGIN
+		
+		DELETE FROM personas."UserOficinas"
+		WHERE "Id_identity"=identidad AND "Id_oficina"= id_oficina;
+		
+	RETURN FOUND;
+	END;
+$function$
+;
+______________________________________________________________________________________________________

@@ -1,0 +1,298 @@
+﻿@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@inject HttpClient Http
+@attribute [Authorize(Roles = "admin, super, EditarPersonaFisica")]
+@using AutenticacionBlazor.Shared.Modelos.Global
+@using AutenticacionBlazor.Shared.Modelos.Identity
+@using AutenticacionBlazor.Shared.Modelos.Personas.Fisica
+@inject NavigationManager NavigationManager
+@using Newtonsoft.Json
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IJSRuntime jsRuntime
+@inject Blazored.LocalStorage.ISyncLocalStorageService localStorage
+
+@if (pf == null)
+{
+    <div class="row">
+        <div class="col-12">
+            <div class="spinner spinner-track spinner-primary spinner-lg mr-15" style="margin-left: 49%;"></div>
+        </div>
+    </div>
+}
+else
+{
+    <ul class="nav nav-stretch nav-line-tabs nav-line-tabs-2x border-transparent fs-5 fw-bolder">
+        <li class="nav-item mt-2">
+            <a class="nav-link text-active-primary ms-0 me-10 py-5 active" data-bs-toggle="tab" href="#perfil_mis_personas_juridicas">Persona Física</a>
+        </li>
+        <li class="nav-item mt-2">
+            <a class="nav-link text-active-primary ms-0 me-10 py-5" data-bs-toggle="tab" href="#perfil_mis_telefonos">Teléfonos</a>
+        </li>
+        <li class="nav-item mt-2">
+            <a class="nav-link text-active-primary ms-0 me-10 py-5" data-bs-toggle="tab" href="#perfil_mis_mails">Mails</a>
+        </li>
+    </ul>
+    <div class="row">
+        <div class="py-5">
+            <div class="tab-content">
+                <div class="tab-pane fade active show" id="perfil_mis_personas_juridicas" role="tabpanel">
+                    <EditForm Model=@pf OnValidSubmit=@FormSubmitted>
+                        <DataAnnotationsValidator />
+                        <div class="row">
+                            <div class="col-lg">
+                                <div class="col-lg-12mt-5">
+                                    <label>Apellido: </label>
+                                    <input @bind="@pf.Apellido" class="form-control" placeholder="Ej: Juarez..." />
+                                    <span class="form-text text-muted"><ValidationMessage For="@(() => pf.Apellido)" /></span>
+                                </div>
+                                <div class="col-lg-12 mt-5">
+                                    <label>Nombre: </label>
+                                    <input @bind="@pf.Nombre" class="form-control" placeholder="Ej: Juan..." />
+                                    <span class="form-text text-muted"><ValidationMessage For="@(() => pf.Nombre)" /></span>
+                                </div>
+                                <div class="col-lg-12 mt-5">
+                                    <label>Dni: </label>
+                                    <input @bind="@pf.Dni" class="form-control" placeholder="Ej: 11111111..." />
+                                    <span class="form-text text-muted"><ValidationMessage For="@(() => pf.Dni)" /></span>
+                                </div>
+                                <div class="col-lg-12 mt-5">
+                                    <label>Cuit: </label>
+                                    <input @bind="@pf.Cuit" class="form-control" placeholder="Ej: 27111111110..." />
+                                    <span class="form-text text-muted"><ValidationMessage For="@(() => pf.Cuit)" /></span>
+                                </div>
+                            </div>
+                            <div class="col-lg">
+                                <div class="col-lg-12">
+                                    <label>Fecha Nacimiento: </label>
+                                    <input @bind="@pf.Fecha_nacimiento" class="form-control datepicker_ym" placeholder="Ej: 10/10/1960..." />
+                                    <span class="form-text text-muted"><ValidationMessage For="@(() => pf.Fecha_nacimiento)" /></span>
+                                </div>
+                                <div class="col-lg-12 mt-5">
+                                    <label>País:</label>
+                                    @if (paises != null)
+                                    {
+                                        <InputSelect class="form-control xs"
+                                                        style="width: 15rem"
+                                                        @bind-Value=@pf.Id_pais>
+
+                                            <option value="0" selected>Seleccione una opción</option>
+                                            @foreach (var pais in paises)
+                                                    {
+                                                <option value="@pais.Id">@pais.Pais</option>
+                                                    }
+                                        </InputSelect>
+                                    }
+                                    <ValidationMessage For="@(() => pf.Id_pais)" />
+                                </div>
+                                <div class="col-lg-12 mt-5">
+                                    <label>tipo dni:</label>
+                                    @if (tipos_dni != null)
+                                    {
+                                        <InputSelect class="form-control xs"
+                                                        style="width: 15rem"
+                                                        @bind-Value=@pf.Id_tipo_dni>
+
+                                            <option value="0" selected>Seleccione una opción</option>
+                                            @foreach (var td in tipos_dni)
+                                                    {
+                                                <option value="@td.Id">@td.Tipo_dni</option>
+                                                    }
+                                        </InputSelect>
+                                    }
+                                    <ValidationMessage For="@(() => pf.Id_tipo_dni)" />
+                                </div>
+                                <div class="col-lg-12 mt-5">
+                                    <label>Género:</label>
+                                    @if (tipos_dni != null)
+                                    {
+                                        <InputSelect class="form-control xs"
+                                                        style="width: 15rem"
+                                                        @bind-Value=@pf.Id_genero>
+
+                                            <option value="0" selected>Seleccione una opción</option>
+                                            @foreach (var ge in generos)
+                                                    {
+                                                <option value="@ge.Id">@ge.Genero</option>
+                                                    }
+                                        </InputSelect>
+                                    }
+                                    <ValidationMessage For="@(() => pf.Id_genero)" />
+                                </div>
+                                <div class="col-lg-12 mt-5">
+                                    <label>Estado Civil:</label>
+                                    @if (tipos_dni != null)
+                                    {
+                                        <InputSelect class="form-control xs"
+                                                        style="width: 15rem"
+                                                        @bind-Value=@pf.Id_estado_civil>
+
+                                            <option value="0" selected>Seleccione una opción</option>
+                                            @foreach (var ec in estados_civiles)
+                                                    {
+                                                <option value="@ec.Id">@ec.Estado_civil</option>
+                                                    }
+                                        </InputSelect>
+                                    }
+                                    <ValidationMessage For="@(() => pf.Id_estado_civil)" />
+                                </div>
+                            </div>
+                        </div>
+                        @*<div class="col-lg-12">
+                                <label>Foto dni:</label>
+                                <InputFile OnChange="OnInputFileChange" class="form-control" multiple />
+                            </div>*@
+                        <br /><br /><br />
+                        @*<ValidationSummary />*@
+                        <div class="row">
+                            <div class="col-lg-12" style="display:flex;justify-content:space-around">
+                                <button type="submit" class="btn btn-success mr-2">Guardar</button>
+                                <button type="reset" class="btn btn-secondary" @onclick="Cancelar">Cancelar</button>
+                            </div>
+                        </div>
+                    </EditForm>
+                </div>
+                <div class="tab-pane fade" id="perfil_mis_telefonos" role="tabpanel">
+                    <AutenticacionBlazor.Client.Pages.Global.MisTelefonos />
+                </div>
+                <div class="tab-pane fade" id="perfil_mis_mails" role="tabpanel">
+                    <AutenticacionBlazor.Client.Pages.Global.MisMails />
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code
+{
+    [CascadingParameter] private Task<AuthenticationState> authenticationState { get; set; }
+    [CascadingParameter] BlazoredModalInstance ModalInstance { get; set; }
+    private MPersonaFisicaGet pf = new MPersonaFisicaGet();
+    private MPersonaFisicaInsert pfu = new MPersonaFisicaInsert();
+    [Parameter] public int id { get; set; }
+    private MRespuestaBoolMensaje resultado = new MRespuestaBoolMensaje();
+    private List<MListaPaises> paises;
+    private List<MListaTipoDni> tipos_dni;
+    private List<MListaEstadoCivil> estados_civiles;
+    private List<MListaGeneros> generos;
+    string Message = "Ningún/os archivo/s seleccionado/s";
+    IReadOnlyList<IBrowserFile> selectedFiles;
+    private List<UploadedFile> parts = new List<UploadedFile>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            if (pf != null)
+            {
+                pfu.Apellido = pf.Apellido;
+                pfu.Nombre = pf.Nombre;
+                pfu.Dni = pf.Dni;
+                pfu.Cuit = pf.Cuit;
+                pfu.Fecha_nacimiento = pf.Fecha_nacimiento;
+                pfu.Id_genero = pf.Id_genero;
+                pfu.Id_pais = pf.Id_pais;
+                pfu.Id_estado_civil = pf.Id_estado_civil;
+                pfu.Id_tipo_dni = pf.Id_tipo_dni;
+            }
+            await CargaDatos();
+            await jsRuntime.InvokeVoidAsync("SwalCerrar", "2");
+            //var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            //if (authState.User.IsInRole("EditarPersonaFisica"))
+            //{
+            //    await CargaDatos();
+            //}
+            //else
+            //{
+            //    await jsRuntime.InvokeAsync<bool>("SwalNormal", "Oops...", "No tienes permiso para realizar esta acción", "error", true);
+            //}
+        }
+
+        catch (AccessTokenNotAvailableException exception)
+        {
+            await ModalInstance.CloseAsync();
+        }
+    }
+
+    protected async Task CargaDatos()
+    {
+        pf = await Http.GetFromJsonAsync<MPersonaFisicaGet>("api/PersonaFisica/GetPersonaFisicaById/" + id);
+        paises = await Http.GetFromJsonAsync<List<MListaPaises>>("api/Global/ListaDePaises");
+        tipos_dni = await Http.GetFromJsonAsync<List<MListaTipoDni>>("api/Global/ListaTipoDni");
+        estados_civiles = await Http.GetFromJsonAsync<List<MListaEstadoCivil>>("api/Global/ListaEstadoCivil");
+        generos = await Http.GetFromJsonAsync<List<MListaGeneros>>("api/Global/ListaGeneros");
+    }
+
+    protected async Task Editar()
+    {
+        if (this.ControlCuit())
+        {
+            using var response = await Http.PostAsJsonAsync("api/PersonaFisica/UpdatePersonaFisica", pfu);
+            resultado = await response.Content.ReadFromJsonAsync<MRespuestaBoolMensaje>();
+            if (resultado.resultado == true)
+            {
+                var Confirm1 = await jsRuntime.InvokeAsync<bool>("SwalNormal", "Correcto!", resultado.mensaje, "success", false);
+                if (Confirm1)
+                {
+                    await ModalInstance.CloseAsync(ModalResult.Ok<MPersonaFisicaInsert>(pfu));
+                }
+            }
+            else
+            {
+                await jsRuntime.InvokeAsync<bool>("SwalNormal", "Oops...", resultado.mensaje, "error", true);
+                Cancelar();
+            }
+        }
+        else
+        {
+            await jsRuntime.InvokeAsync<bool>("SwalNormal", "Oops...", "El cuit no se corresponde con el dni", "error", true);
+        }
+    }
+
+    protected async Task FormSubmitted()
+    {
+        try
+        {
+            await Editar();
+        }
+        catch (Exception e)
+        {
+            await jsRuntime.InvokeAsync<bool>("SwalNormal", "Oops...", "Algo salió mal", "error", true);
+            Console.WriteLine("No se pudo realizar la consulta.", "Error!" + e);
+            Cancelar();
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await jsRuntime.InvokeVoidAsync("DatePicker_YMD");
+    }
+
+    void Cancelar()
+    {
+        ModalInstance.CancelAsync();
+    }
+
+    private void OnInputFileChange(InputFileChangeEventArgs e)
+    {
+        selectedFiles = e.GetMultipleFiles();
+        Message = $"{selectedFiles.Count} file(s) selected";
+        this.StateHasChanged();
+    }
+
+    private bool ControlCuit()
+    {
+        var cuit = (pf.Cuit).ToString();
+        cuit = cuit.Replace("-", string.Empty);
+        var subcuit = cuit.Substring(2);
+        var dnicuit = subcuit.Remove(8);
+        if (dnicuit != pf.Dni)
+        {
+            return false;
+        }
+        else
+        {
+            return true;
+        }
+    }
+
+}

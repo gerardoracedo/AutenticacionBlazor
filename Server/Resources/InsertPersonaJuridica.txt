@@ -1,0 +1,86 @@
+CREATE OR REPLACE FUNCTION "personas"."Insert_persona_juridica"("id_tipo_persona" int4, "nombre_fantasia" varchar, "nombre_legal" varchar, "cuit" varchar, "id_tipo_sociedad" int4, "id_pais" int4, "uid_persona_fisica" int4, "rol" varchar, "usuario_graba" text, "estado" int4)
+  RETURNS TABLE("resultado" bool, "mensaje" text, "id" int4) AS $BODY$
+	DECLARE
+    _Uuid int4;
+		_Id int4;
+		_Id2 int4;
+		_Fecha_nacimiento date;
+		_Bol bool;
+		_Mensaje text;
+	BEGIN	
+	/*===========================
+		- Para agregar la fecha de nacimiento en NULL enviar la fecha '1900-01-01'
+	===========================*/
+	
+	--Verifico si existe la persona con el cuit
+	IF EXISTS (SELECT "Id" FROM personas."Persona_juridica" WHERE "Cuit" = cuit AND "Estado" = 1 OR "Estado" = 2) THEN
+		--Existe la persona, devolver error y mensaje de error
+		_Bol = false;
+		_Mensaje = CONCAT('El Cuit : ', cuit, ' ya existe');
+	ELSE
+		--No existe la persona, agregar
+		
+		-- Creo y obtengo el "Id" de la tabla persona
+		INSERT INTO personas."Persona"("Id_tipo_persona") VALUES (id_tipo_persona) RETURNING "Uid" INTO _Uuid;
+		
+		-- Verifico que se agrego el "Id" en la tabla persona
+		IF _Uuid IS NOT NULL THEN
+			
+			-- Agrego los datos de la persona
+			INSERT INTO personas."Persona_juridica"("Uid_persona", "Nombre_fantasia", "Nombre_legal", "Cuit", "Id_tipo_sociedad", "Id_pais", "Estado")
+			VALUES(_Uuid, nombre_fantasia, nombre_legal, cuit, id_tipo_sociedad, id_pais, estado) RETURNING "Id" INTO _Id;
+			
+			-- Verifico si se agrego a la persona con el "Id" del returning
+			IF _Id IS NOT NULL THEN
+				-- Se agrego los datos de la persona
+				-- Ahora verifico si fue creado desde una persona fisica o no
+				IF uid_persona_fisica = 0 THEN
+					-- No se agrega la relacion con persona fisica
+					_Bol = true;
+					_Mensaje = CONCAT('Se agregaron correctamente los datos para ', nombre_fantasia, ' ', nombre_legal);
+				ELSE
+					-- Agrego relacion con persona fisica
+					INSERT INTO personas."Persona_fisica_juridica"("Uid_persona_fisica", "Uid_persona_juridica", "Rol", "Usuario_graba")
+					VALUES(uid_persona_fisica, _Uuid, rol, usuario_graba) RETURNING "Id" INTO _Id2;
+					
+					-- Verifico si se agrego
+					IF _Id2 IS NOT NULL THEN
+						-- Se agrego
+						_Bol = true;
+						_Mensaje = CONCAT('Se agregaron correctamente los datos para ', nombre_fantasia, ' ', nombre_legal,'. Asi tambien la relacion entre persona fisica y juridica');
+					ELSE
+						-- No se agrego
+						-- Muestro el mensaje de exito al grabar persona juridica
+						_Bol = true;
+						_Mensaje = CONCAT('Se agregaron correctamente los datos para ', nombre_fantasia, ' ', nombre_legal,'. Pero no la relacion entre persona fisica y juridica');
+					END IF;
+				END IF;
+				
+			ELSE
+				-- No se agregaron los datos de la persona
+				
+				-- Cambio el estado del Uid en persona
+				UPDATE personas."Persona" SET "Estado" = 0 WHERE "Uid" = _Uuid;
+				
+				_Bol = false;
+				_Mensaje = CONCAT('No se pudieron grabar los datos para ', nombre_fantasia, ' ', nombre_legal);
+				
+			END IF;
+		ELSE
+		 -- No se pudo hacer el insert en persona
+			_Bol = false;
+			_Mensaje = 'No se pudo generar el identificador de la persona';
+		END IF;
+		
+	END IF;
+	
+	RETURN QUERY
+		
+		-- Resultado final
+		SELECT _Bol,CAST ( _Mensaje AS text ), _Id;
+		
+	END;
+$BODY$
+  LANGUAGE plpgsql VOLATILE
+  COST 100
+  ROWS 1000

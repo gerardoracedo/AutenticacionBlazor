@@ -1,0 +1,169 @@
+﻿@page "/Usuario/Perfil"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@layout NuevoLayout
+@inject IJSRuntime jsRuntime
+@using System.Security.Claims
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject HttpClient Http
+@using AutenticacionBlazor.Shared.Modelos.Personas.Fisica
+@using AutenticacionBlazor.Shared.Modelos.Personas.Juridica
+@attribute [Authorize]
+@using AutenticacionBlazor.Shared.Modelos.Personas
+@using AutenticacionBlazor.Shared.Modelos.Identity
+@using AutenticacionBlazor.Shared.Modelos.Global
+@using AutenticacionBlazor.Shared.Modelos.Rentas.Comercio
+@inject NavigationManager NavigationManager
+@inject IModalService Modal
+@inject Blazored.LocalStorage.ISyncLocalStorageService localStorage
+
+<AuthorizeView>
+    <Authorized>
+        @if (_personafisica != null)
+        {
+            <div class="card">
+                <div class="card-body pt-9 pb-0">
+                    <div class="d-flex flex-wrap flex-sm-nowrap mb-3">
+                        <div class="flex-grow-1">
+                            <div class="d-flex justify-content-between align-items-start flex-wrap mb-2">
+                                <div class="d-flex flex-column">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <a href="#" class="text-gray-900 text-hover-primary fs-2 fw-bolder me-1">
+                                            @(_personafisica.Apellido) @(_personafisica.Nombre)
+                                        </a>
+                                    </div>
+                                    <div class="d-flex flex-wrap fw-boldest fs-6 mb-4 pe-2">
+                                        <span class="d-flex align-items-center text-gray-400 text-hover-primary me-5 mb-2">
+                                            <!--begin::Svg Icon | path: icons/duotune/communication/com006.svg-->
+                                            <span class="svg-icon svg-icon-4 me-1">
+                                                <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="24px" height="24px" viewBox="0 0 24 24" version="1.1">
+                                                    <g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+                                                        <rect x="0" y="0" width="24" height="24" />
+                                                        <circle fill="#000000" opacity="0.3" cx="12" cy="12" r="10" />
+                                                        <rect fill="#000000" x="11" y="10" width="2" height="7" rx="1" />
+                                                        <rect fill="#000000" x="11" y="7" width="2" height="2" rx="1" />
+                                                    </g>
+                                                </svg>
+                                            </span>
+                                            <!--end::Svg Icon-->@(_personafisica.Cuit)
+                                        </span>
+                                        <span class=" fwd-flex align-items-center text-gray-400 text-hover-primary mb-2">
+                                            <!--begin::Svg Icon | path: icons/duotune/communication/com011.svg-->
+                                            <span class="svg-icon svg-icon-4 me-1">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                                    <path opacity="0.3" d="M21 19H3C2.4 19 2 18.6 2 18V6C2 5.4 2.4 5 3 5H21C21.6 5 22 5.4 22 6V18C22 18.6 21.6 19 21 19Z" fill="black"></path>
+                                                    <path d="M21 5H2.99999C2.69999 5 2.49999 5.10005 2.29999 5.30005L11.2 13.3C11.7 13.7 12.4 13.7 12.8 13.3L21.7 5.30005C21.5 5.10005 21.3 5 21 5Z" fill="black"></path>
+                                                </svg>
+                                            </span>
+                                            <!--end::Svg Icon-->@(_user_mail)
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="d-flex my-4">
+                                </div>
+                            </div>
+                                <div class="col-md-4">
+                                    <div class="fw-bold fs-7 text-gray-600 mb-1">Apellido:</div>
+                                    <div class="fw-bolder fs-6 text-gray-800">@_personafisica.Apellido</div>
+                            <div class="row">
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="fw-bold fs-7 text-gray-600 mb-1">Nombre:</div>
+                                    <div class="fw-bolder fs-6 text-gray-800">@_personafisica.Nombre</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="fw-bold fs-7 text-gray-600 mb-1">Cuit:</div>
+                                    <div class="fw-bolder fs-6 text-gray-800">@_personafisica.Cuit</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="fw-bold fs-7 text-gray-600 mb-1">Género:</div>
+                                    <div class="fw-bolder fs-6 text-gray-800">@_personafisica.Genero</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="fw-bold fs-7 text-gray-600 mb-1">País:</div>
+                                    <div class="fw-bolder fs-6 text-gray-800">@_personafisica.Pais</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="fw-bold fs-7 text-gray-600 mb-1">Fecha de Nacimiento:</div>
+                                    <div class="fw-bolder fs-6 text-gray-800">@_personafisica.Fecha_nacimiento.Remove(10)</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="fw-bold fs-7 text-gray-600 mb-1">Estado Civil:</div>
+                                    <div class="fw-bolder fs-6 text-gray-800">@_personafisica.Estado_civil</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <ul class="nav nav-stretch nav-line-tabs nav-line-tabs-2x border-transparent fs-5 fw-bolder">
+                        <li class="nav-item mt-2">
+                            <a class="nav-link text-active-primary ms-0 me-10 py-5 active" data-bs-toggle="tab" href="#perfil_mis_personas_juridicas">Personas jurídicas</a>
+                        </li>
+                        <li class="nav-item mt-2">
+                            <a class="nav-link text-active-primary ms-0 me-10 py-5" data-bs-toggle="tab" href="#perfil_mis_direcciones">Direcciones</a>
+                        </li>
+                        <li class="nav-item mt-2">
+                            <a class="nav-link text-active-primary ms-0 me-10 py-5" data-bs-toggle="tab" href="#perfil_mis_telefonos">Teléfonos</a>
+                        </li>
+                        <li class="nav-item mt-2">
+                            <a class="nav-link text-active-primary ms-0 me-10 py-5" data-bs-toggle="tab" href="#perfil_mis_mails">Mails</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="row">
+                <div class="py-5">
+                    <div class="tab-content">
+                        <div class="tab-pane fade active show" id="perfil_mis_personas_juridicas" role="tabpanel">
+                            <AutenticacionBlazor.Client.Pages.Persona_Juridica.PersonaJuridica RecargarDirecciones="@RecargarDirecciones" />
+                        </div>
+                        <div class="tab-pane fade" id="perfil_mis_direcciones" role="tabpanel">
+                            <Direcciones_lista @ref="_RecargarDirecciones"/>
+                        </div>
+                        <div class="tab-pane fade" id="perfil_mis_telefonos" role="tabpanel">
+                            <AutenticacionBlazor.Client.Pages.Global.MisTelefonos />
+                        </div>
+                        <div class="tab-pane fade" id="perfil_mis_mails" role="tabpanel">
+                            <AutenticacionBlazor.Client.Pages.Global.MisMails />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </Authorized>
+    <NotAuthorized>
+        <p>&nbsp;</p>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private string _user_mail;
+    private MPersonaFisicaGet _personafisica;
+    [CascadingParameter] public NuevoLayout Layout { get; set; }
+    private Direcciones_lista _RecargarDirecciones;
+
+    public async void RecargarDirecciones()
+    {
+        await _RecargarDirecciones.Recargardirecciones();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            Layout._Ubicacion = "Mi Perfil";
+            await CargarDatos();
+        }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            exception.Redirect();
+        }
+    }
+
+    protected async Task CargarDatos()
+    {
+        localStorage.RemoveItem("idpf");
+        await jsRuntime.InvokeVoidAsync("SwalLoading");
+        _personafisica = await Http.GetFromJsonAsync<MPersonaFisicaGet>("api/PersonaFisica/Informacion");
+    }
+
+}

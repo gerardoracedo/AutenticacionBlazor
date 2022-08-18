@@ -1,0 +1,67 @@
+﻿@page "/test"
+@using System.Linq
+@using Microsoft.Extensions.Logging
+@inject HttpClient Http
+@inject ILogger<Test> Logger
+@using System.IO
+@using System.Drawing
+
+<h1>Blazor WebAssembly File Upload</h1>
+
+<h3>@Message</h3>
+
+<form @onsubmit="OnSubmit">
+    <InputFile OnChange="OnInputFileChange2" multiple />
+    <br /><br />
+    <button type="submit">Upload Selected File(s)</button>
+</form>
+<br />
+<button type="button" onclick="javascript:window.location='/api/Archivos/Download/10'">Descargar</button>
+
+@code {
+    //var response = await client.PostAsync("api/Archivos_Personas/PostPersonaArchivo2?id=2", content);
+
+    string Message = "No file(s) selected";
+    IReadOnlyList<IBrowserFile> selectedFiles;
+    private List<UploadedFile> parts = new List<UploadedFile>();
+
+    private void OnInputFileChange2(InputFileChangeEventArgs e)
+    {
+        selectedFiles = e.GetMultipleFiles();
+        Message = $"{selectedFiles.Count} file(s) selected";
+        this.StateHasChanged();
+    }
+    private async void OnSubmit()
+    {
+        
+        foreach (var file in selectedFiles)
+        {
+
+            Stream stream = file.OpenReadStream();
+            MemoryStream ms = new MemoryStream();
+            await stream.CopyToAsync(ms);
+            stream.Close();
+            string _extension = Path.GetExtension(file.Name);
+            if (_extension == ".jpg")
+            {
+
+            }
+            parts.Add(new UploadedFile() { FileName = file.Name, FileType = file.ContentType, FileContent = ms.ToArray() });
+            //UploadedFile uploadedFile = new UploadedFile();
+            //uploadedFile.FileName = file.Name;
+            //uploadedFile.FileType = file.ContentType;
+            //uploadedFile.FileContent = ms.ToArray();
+            ms.Close();
+
+            //await Http.PostAsJsonAsync<UploadedFile>("/api/Archivos_Personas/PostArchivo", uploadedFile);
+        }
+        await Http.PostAsJsonAsync<List<UploadedFile>>("/api/Archivos/Upload", parts);
+        Message = $"{selectedFiles.Count} file(s) uploaded on server";
+        this.StateHasChanged();
+    }
+
+    protected async void Descargar()
+    {
+        await Http.GetFromJsonAsync<string>("/api/Archivos/GetPersonaArchivo?filename=ec12d915-a468-4330-ac8a-2df5e909d4ab-3.png");
+    }
+}

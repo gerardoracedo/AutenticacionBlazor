@@ -1,0 +1,238 @@
+﻿CREATE OR REPLACE FUNCTION public."Assign_role_to_new_user"(identidad text)
+ RETURNS boolean
+ LANGUAGE plpgsql
+AS $function$
+	DECLARE useridentidty text; 
+	BEGIN		
+		
+		SELECT INTO useridentidty "Id" FROM "public"."AspNetUsers" WHERE "Email" = identidad;
+		
+		INSERT INTO public."AspNetUserRoles" ("UserId", "RoleId")
+		VALUES(useridentidty, '27081592-ef3a-478b-9e54-41b6defb13cf');
+	
+	RETURN FOUND;
+	END;
+$function$
+;
+______________________________________________________________________________________________________
+CREATE OR REPLACE FUNCTION public."Assign_role_to_user"(identidad text, rolasignado text)
+ RETURNS boolean
+ LANGUAGE plpgsql
+AS $function$
+	BEGIN		
+				
+		INSERT INTO public."AspNetUserRoles" ("UserId", "RoleId")
+		VALUES(identidad, rolasignado);
+	
+	RETURN FOUND;
+	END;
+$function$
+;
+______________________________________________________________________________________________________
+CREATE OR REPLACE FUNCTION public."Delete_role"(idrole text)
+ RETURNS TABLE(resultado boolean, mensaje text)
+ LANGUAGE plpgsql
+AS $function$
+	BEGIN
+		IF 
+		
+			EXISTS(SELECT 1 FROM public."AspNetRoles"
+			WHERE "Id"= idrole)
+	
+		THEN			
+		
+			DELETE FROM public."AspNetRoles"
+			WHERE "Id"= idrole;		
+			resultado = true;
+			mensaje = 'Se borró correctamente el rol';
+		
+		ELSE
+		
+			resultado = false;
+			mensaje = 'No se pudo borrar el rol';
+		
+		END IF;		
+		
+	RETURN QUERY
+	SELECT resultado,CAST ( mensaje AS text );
+	END;
+$function$
+;
+______________________________________________________________________________________________________
+CREATE OR REPLACE FUNCTION public."Get_aspnetroles"()
+ RETURNS TABLE(roleid text, rolename character varying)
+ LANGUAGE plpgsql
+AS $function$
+	BEGIN
+	RETURN QUERY 
+
+		SELECT R."Id" AS "RoleId", R."Name" AS "RoleName"
+		FROM public."AspNetRoles" AS R;
+		
+	END;
+$function$
+;
+______________________________________________________________________________________________________
+CREATE OR REPLACE FUNCTION public."Get_aspnetusers"()
+ RETURNS TABLE(id text, email character varying)
+ LANGUAGE plpgsql
+AS $function$
+	BEGIN
+	RETURN QUERY 
+
+		SELECT "Id" , "Email" 
+		FROM public."AspNetUsers";
+		
+	END;
+$function$
+;
+__________________________________________________________________________________________________
+CREATE OR REPLACE FUNCTION public."Get_not_user_roles"(iduser text)
+ RETURNS TABLE(roleid text, rolename character varying)
+ LANGUAGE plpgsql
+AS $function$
+	BEGIN
+	RETURN QUERY 
+
+		SELECT R."Id" AS "roleid", R."Name" AS "rolename"
+		FROM public."AspNetRoles" AS R 
+		WHERE R."Id" NOT IN 
+		(SELECT UR."RoleId" FROM "AspNetUserRoles" AS UR 
+		WHERE UR."UserId" = iduser);	
+		
+	END;
+$function$
+__________________________________________________________________________________________________
+CREATE OR REPLACE FUNCTION public."Get_role"(idr character varying)
+ RETURNS TABLE(id text, rolename character varying)
+ LANGUAGE plpgsql
+AS $function$
+	BEGIN
+	RETURN QUERY 
+
+		SELECT "Id", "Name" AS "rolename"
+		FROM public."AspNetRoles"
+		WHERE "Id" = idr;
+		
+	END;
+$function$
+;
+______________________________________________________________________________________________________
+CREATE OR REPLACE FUNCTION public."Get_user_roles"(iduser text)
+ RETURNS TABLE(roleid text, rolename character varying)
+ LANGUAGE plpgsql
+AS $function$
+	BEGIN
+	RETURN QUERY 
+
+		SELECT R."Id" AS "roleid", R."Name" AS "rolename"
+		FROM public."AspNetRoles" AS R 
+		JOIN public."AspNetUserRoles" AS UR 
+		ON R."Id" = UR."RoleId" 
+		WHERE UR."UserId" = iduser;		
+		
+	END;
+$function$
+;
+______________________________________________________________________________________________________
+CREATE OR REPLACE FUNCTION public."Insert_role"(namerole text)
+ RETURNS TABLE(resultado boolean, mensaje text)
+ LANGUAGE plpgsql
+AS $function$
+	DECLARE idr text; 
+	DECLARE cs text;
+    DECLARE _Id text;
+	BEGIN
+		
+		SELECT uuid_generate_v4()::text INTO idr;
+		SELECT UPPER(uuid_generate_v4()::text) INTO cs;
+		INSERT INTO public."AspNetRoles"
+		("Id", "Name", "NormalizedName", "ConcurrencyStamp")
+		VALUES(idr, namerole, UPPER(namerole), cs)
+		RETURNING "Id" INTO _Id;	
+			-- Verifico si se agregó
+		IF _Id IS NOT NULL THEN
+			resultado = true;
+			mensaje = CONCAT('Se agrego el rol: ',namerole);
+		ELSE
+			resultado = false;
+			mensaje = CONCAT('No se pudo agregar el rol: ',namerole);
+		END IF;
+	
+	RETURN QUERY
+	SELECT resultado,CAST ( mensaje AS text );
+	END;
+$function$
+;
+______________________________________________________________________________________________________
+CREATE OR REPLACE FUNCTION public."Update_role"(idrole text, namerole text)
+ RETURNS TABLE(resultado boolean, mensaje text)
+ LANGUAGE plpgsql
+AS $function$	
+    DECLARE _Id text;
+	BEGIN
+		
+		UPDATE public."AspNetRoles"
+		SET "Name"= namerole, 
+			"NormalizedName" = UPPER(namerole) 
+		WHERE "Id"= idrole		
+		RETURNING "Id" INTO _Id;	
+			-- Verifico si se agregó
+		IF _Id IS NOT NULL THEN		
+			resultado = true;
+			mensaje = 'Se modificó correctamente el rol';
+		ELSE
+			resultado = false;
+			mensaje = 'No se pudo modificar el rol';
+		END IF;
+	
+	RETURN QUERY
+	SELECT resultado,CAST ( mensaje AS text );
+	END;
+$function$
+;
+______________________________________________________________________________________________________
+CREATE OR REPLACE FUNCTION public."Search_roles"(usuarioquery text)
+ RETURNS TABLE(id text, rolename character varying)
+ LANGUAGE plpgsql
+AS $function$
+	BEGIN
+	RETURN QUERY 
+
+		SELECT "Id", "Name" AS "rolename"
+		FROM public."AspNetRoles" 
+		WHERE "Name" LIKE ('%' || usuarioquery || '%');
+		
+	END;
+$function$
+;
+______________________________________________________________________________________________________
+CREATE OR REPLACE FUNCTION public."Search_users"(usuarioquery text)
+ RETURNS TABLE(id text, email character varying)
+ LANGUAGE plpgsql
+AS $function$
+	BEGIN
+	RETURN QUERY 
+
+		SELECT "Id", "Email"
+		FROM public."AspNetUsers" 
+		WHERE "Email" LIKE ('%' || usuarioquery || '%');
+		
+	END;
+$function$
+;
+______________________________________________________________________________________________________
+CREATE OR REPLACE FUNCTION public."Remove_role_from_user"(iduser text, idrole text)
+ RETURNS boolean
+ LANGUAGE plpgsql
+AS $function$
+	BEGIN
+		
+		DELETE FROM public."AspNetUserRoles"
+		WHERE "UserId"=iduser AND "RoleId"= idrole;
+		
+	RETURN FOUND;
+	END;
+$function$
+;
+______________________________________________________________________________________________________

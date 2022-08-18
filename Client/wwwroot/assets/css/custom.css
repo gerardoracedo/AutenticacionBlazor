@@ -1,0 +1,42 @@
+﻿.rz-dropdown-panel {
+    z-index: 10090 !important;
+}
+
+#Autorizando1 {
+    width: 100%;
+    height: 100vh;
+    display: flex;
+    justify-content: space-around;
+}
+
+#Autorizando2 {
+    display: flex;
+    margin-top: 35vh;
+}
+
+.Autorizando3 {
+    margin: 5px;
+}
+
+.error.error-5 .error-title {
+    font-size: 7rem !important;
+}
+
+@media (min-width: 768px) {
+    .error.error-5 .error-title {
+        font-size: 14rem !important;
+    }
+}
+
+/* INICIO FONTS */
+
+h6, .h6, h5, .h5, h4, .h4, h3, .h3, h2, .h2, h1, .h1 {
+    font-family: 'Montserrat';
+}
+
+p, a, span {
+    font-family: 'Nunito Sans';
+}
+
+/* FIN FONTS */
+

@@ -1,0 +1,55 @@
+﻿@page "/TLogin"
+@inject HttpClient Http
+@using AutenticacionBlazor.Shared.Modelos.Rentas.Comercio
+@using AutenticacionBlazor.Shared.Modelos.Global
+
+<h3>Login</h3>
+
+
+
+@code {
+    string token = null;
+    private MNuevo _nuevo = new MNuevo();
+    //private MDdjj _ddjj = new MDdjj();
+    //private List<Mddjj_detalle> _ddjjdetalle = new List<Mddjj_detalle>();
+    private MRespuestaBoolMensaje resultado = new MRespuestaBoolMensaje();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Post para agregar ddjj
+        //_ddjj.Estado = 1;
+        //_ddjj.Uid_persona = 14;
+
+        //_ddjjdetalle.Add(new Mddjj_detalle() { Estado = 1, Id_ddjj = 12, Id_actividad = 7, Monto = 121.22m });
+        //_ddjjdetalle.Add(new Mddjj_detalle() { Estado = 1, Id_ddjj = 12, Id_actividad = 8, Monto = 451.33m });
+        //_ddjjdetalle.Add(new Mddjj_detalle() { Estado = 1, Id_ddjj = 12, Id_actividad = 9, Monto = 521.45m });
+
+        //for (int i = 0; i < 1000; i++)
+        //{
+        //    _ddjjdetalle.Add(new Mddjj_detalle() { Estado = 1, Id_ddjj = 12, Id_actividad = 9, Monto = 521.45m });
+        //}
+
+        //_ddjj.Detalle = _ddjjdetalle;
+
+        //using var response = await Http.PostAsJsonAsync("api/Comercio/Actividades/Cargaddjj", _ddjj);
+        //resultado = await response.Content.ReadFromJsonAsync<MRespuestaBoolMensaje>();
+        //Console.WriteLine(resultado);
+
+        // Login test
+
+
+        //using var response = await Http.PostAsJsonAsync("api/Global/NuevoLogin", _nuevo);
+        //_nuevo = await response.Content.ReadFromJsonAsync<MNuevo>();
+        //if (_nuevo.Resultado == true)
+        //{
+        //    Console.WriteLine("True");
+        //}
+        //else
+        //{
+        //    Console.WriteLine("False");
+        //}
+        //Console.WriteLine(_nuevo);
+
+    }
+
+}

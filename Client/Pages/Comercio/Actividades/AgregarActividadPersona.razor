@@ -1,0 +1,363 @@
+﻿@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@inject IJSRuntime jsRuntime
+@using System.Security.Claims
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject HttpClient Http
+@using AutenticacionBlazor.Shared.Modelos.Personas
+@attribute [Authorize(Roles = "super,general")]
+@inject NavigationManager NavigationManager
+@inject Blazored.LocalStorage.ISyncLocalStorageService localStorage
+@using AutenticacionBlazor.Shared.Models.Identity
+@using AutenticacionBlazor.Shared.Modelos.Rentas.Comercio
+@using AutenticacionBlazor.Shared.Modelos.Global
+@using AutenticacionBlazor.Shared.Modelos.Personas.Fisica
+@using AutenticacionBlazor.Shared.Modelos.Personas.Juridica
+@using System.IO
+
+@if (_listadeactividades != null && _listadegrupos != null && _listadesubgrupos != null && _direcciones != null)
+{
+    <div class="modal-backdrop fade show"></div>
+    <div class="modal fade show d-block" style="pointer-events: none;" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable" role="document">
+            <EditForm Model=@_agregaractividad OnValidSubmit=@AgregarActividad class="form w-100" id="CC">
+                <div class="modal-content border-primary">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="staticBackdropLabel">@ModalInstance.Title</h5>
+                        <button type="button" class="btn-close" @onclick="Cancel" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body" style="max-height: 75vh; overflow-y: auto;">
+                        <DataAnnotationsValidator />
+                        <div class="fv-row mb-10">
+                            <label class="form-label fw-bolder text-gray-900 fs-6">Los campos con <i class="bi bi-asterisk text-danger"></i> son obligatorios</label>
+                        </div>
+                        <div class="fv-row mb-10">
+                            <label class="form-label fw-bolder text-gray-900 fs-6">Persona</label>
+                            <select id="persona"
+                                    class="form-control selectpicker"
+                                    data-size="7"
+                                    data-live-search="true"
+                                    data-container="body"
+                                    @onchange="SeleccionPersona">
+                                <option value="0" selected disabled>Seleccione una persona</option>
+                                @if (_personaFisica != null)
+                                {
+
+                                    <option value="@_personaFisica.Uid_persona">@_personaFisica.Apellido @_personaFisica.Nombre</option>
+
+                                }
+                                @if (_personaJuridica != null)
+                                {
+                                    @foreach (var x in _personaJuridica)
+                                    {
+                                        <option value="@x.Uid_persona_juridica">@x.Nombre_legal @x.Nombre_fantasia</option>
+                                    }
+                                }
+                            </select>
+                            <ValidationMessage For="@(() => _agregaractividad.Uid_persona)" />
+                        </div>
+                        <div class="fv-row mb-10">
+                            <label class="form-label fw-bolder text-gray-900 fs-6">Direccion</label>
+                            <select id="tipo_direccion"
+                                    class="form-control selectpicker"
+                                    data-size="7"
+                                    data-live-search="true"
+                                    data-container="body"
+                                    @onchange="SeleccionDireccion">
+                                <option value="0" selected disabled>Seleccione un tipo de direccion</option>
+                                @if (_direcciones != null)
+                                {
+                                    @foreach (var x in _direcciones)
+                                    {
+                                        <option value="@x.Id_direccion">@x.Nombre_calle @x.Numero - @x.Localidad - @x.Provincia - @x.Pais</option>
+                                    }
+                                }
+                            </select>
+                            <ValidationMessage For="@(() => _agregaractividad.Id_direccion)" />
+                        </div>
+                        <div class="fv-row mb-10">
+                            <label class="form-label fw-bolder text-gray-900 fs-6">Actividad</label>
+                            <select id="sactividades"
+                                    class="selectpicker form-control"
+                                    data-size="10"
+                                    data-live-search="true"
+                                    data-container="body"
+                                    @onchange="SeleccionDeActividad">
+                                <option value="0" selected disabled>Seleccione una actividad</option>
+                                @if (_listadeactividades != null)
+                                {
+                                    @foreach (var l in _listadeactividades)
+                                    {
+                                        @if (l.Alicuota == "EXENTO")
+                                        {
+                                            <option value="@l.Id">@(l.Alicuota) - @(l.Descripcion)</option>
+                                        }
+                                        else
+                                        {
+                                            <option value="@l.Id">@(l.Alicuota) % - @(l.Descripcion)</option>
+                                        }
+
+                                    }
+                                }
+                            </select>
+                            <ValidationMessage For="@(() => _agregaractividad.Codigo_actividad)" />
+                        </div>
+                        <div class="fv-row mb-10">
+                            <label class="form-label fw-bolder text-gray-900 fs-6">Actividad grupo</label>
+                            <input @bind="@Nombre_grupo" class="form-control" disabled="disabled" />
+                        </div>
+                        <div class="fv-row mb-10">
+                            <label class="form-label fw-bolder text-gray-900 fs-6">Actividad sub-grupo</label>
+                            <input @bind="@Nombre_sub_grupo" class="form-control" disabled="disabled" />
+                        </div>
+                        <div class="fv-row mb-10">
+                            <label class="form-label fw-bolder text-gray-900 fs-6">Mes y año de inicio de actividad</label>
+                            <input type="text" class="form-control datepicker_ym" @onclick="InicioDeActividad" readonly />
+                            <ValidationMessage For="@(() => _agregaractividad.Inicio_actividad)" />
+                        </div>
+                        <div class="fv-row mb-10">
+                            <label class="form-label fw-bolder text-gray-900 fs-6">Padron CISI</label>
+                            <input type="text" class="form-control" @bind="@_agregaractividad.Padron_cisi" />
+                            <ValidationMessage For="@(() => _agregaractividad.Padron_cisi)" />
+                        </div>
+                        <div class="fv-row mb-10 form-check">
+                            <input id="local" value="" type="checkbox" class="form-check-input" name="local" @bind="@_agregaractividad.Local" @onclick="ToggleLocal">
+                            <label for="local" class="form-check-label fw-bold ps-2 fs-6">Tiene local</label>
+                        </div>
+                        <div class="fv-row mb-10">
+                            <label class="form-label fw-bolder text-gray-900 fs-6">Nombre del local</label>
+                            @if (_agregaractividad.Local == true)
+                            {
+                                <input type="text" class="form-control" @bind="@_agregaractividad.Nombre_local" />
+                            }
+                            else
+                            {
+                                <input type="text" class="form-control" disabled />
+                            }
+                            <ValidationMessage For="@(() => _agregaractividad.Nombre_local)" />
+                        </div>
+                        <div class="fv-row mb-10">
+                            <label class="form-label fw-bolder text-gray-900 fs-6">Habilitacion</label>
+                            <InputFile OnChange="OnInputFileChange" class="form-control" />
+                        </div>
+                        
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-success mr-2">Enviar</button>
+                        <button type="reset" class="btn btn-secondary" @onclick="Cancelar">Cancelar</button>
+                    </div>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+}
+
+@code {
+    [CascadingParameter] BlazoredModalInstance ModalInstance { get; set; }
+    private string id_identity;
+    private MPersonaFisicaGet _personaFisica;
+    private List<MPersonaJuridicaGet> _personaJuridica;
+    private List<MMisDirecciones> _direcciones;
+    private List<MListaActividades> _listadeactividades;
+    private List<MListaGrupoActividades> _listadegrupos;
+    private List<MListaSubGrupoActividades> _listadesubgrupos;
+    private MAgregarActividadesAPersonas _agregaractividad = new MAgregarActividadesAPersonas();
+    private MRespuestaBoolMensaje _resultado;
+    private string Nombre_actividad = "";
+    private string Nombre_sub_grupo = "";
+    private string Nombre_grupo = "";
+    string Message = "No file(s) selected";
+    IReadOnlyList<IBrowserFile> selectedFiles;
+    private List<UploadedFile> parts = new List<UploadedFile>();
+
+    [Parameter] public List<string> SelectedValues { get; set; } = new List<string>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var userAuth = authState.User;
+        id_identity = authState.User.Claims.ToList().FirstOrDefault(x => x.Type == "sub").Value;
+        //_agregaractividad.Id_persona = id_identity;
+        _agregaractividad.Local = false;
+        await CargarDatos();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await jsRuntime.InvokeVoidAsync("DatePicker_YM");
+    }
+
+    private void OnInputFileChange(InputFileChangeEventArgs e)
+    {
+        selectedFiles = e.GetMultipleFiles();
+        Message = $"{selectedFiles.Count} file(s) selected";
+        this.StateHasChanged();
+    }
+
+    protected async Task CargarDatos()
+    {
+        //await jsRuntime.InvokeVoidAsync("SwalLoading");
+        _direcciones = await Http.GetFromJsonAsync<List<MMisDirecciones>>("api/Personas/Direccion/Lista");
+        if (_direcciones != null)
+        {
+            _personaFisica = await Http.GetFromJsonAsync<MPersonaFisicaGet>("api/PersonaFisica/Informacion");
+            _personaJuridica = await Http.GetFromJsonAsync<List<MPersonaJuridicaGet>>("api/PersonaJuridica/ListaMisPersonasJuridicas");
+            _listadeactividades = await Http.GetFromJsonAsync<List<MListaActividades>>("api/Comercio/Actividades/Lista/Activas");
+            _listadegrupos = await Http.GetFromJsonAsync<List<MListaGrupoActividades>>("api/Comercio/Actividades/Lista/Grupos");
+            _listadesubgrupos = await Http.GetFromJsonAsync<List<MListaSubGrupoActividades>>("api/Comercio/Actividades/Lista/SubGrupos");
+            if (_listadeactividades != null && _listadegrupos != null && _listadesubgrupos != null && _direcciones != null)
+            {
+                await jsRuntime.InvokeVoidAsync("SwalCerrar", "2");
+            }
+        }
+        else
+        {
+            Cancel();
+            await jsRuntime.InvokeAsync<bool>("SwalNormal", "Verifique", "Debe cargar una direccion.", "error", false);
+        }
+
+
+
+
+    }
+
+    protected async Task AgregarActividad()
+    {
+        var confirmacion = await jsRuntime.InvokeAsync<bool>("SwalNormal", "Atencion!", "Al hacer clic en Aceptar, confirmo que los datos cargados en este formulario son correctos. ", "question", true);
+        if (confirmacion)
+        {
+            if (selectedFiles != null)
+            {
+                foreach (var file in selectedFiles)
+                {
+                    Stream stream = file.OpenReadStream();
+                    MemoryStream ms = new MemoryStream();
+                    await stream.CopyToAsync(ms);
+                    stream.Close();
+                    string _extension = Path.GetExtension(file.Name);
+                    parts.Add(new UploadedFile() { FileName = file.Name, FileType = file.ContentType, FileContent = ms.ToArray() });
+                    ms.Close();
+                }
+
+                _agregaractividad.Archivos = parts;
+            }
+
+            await jsRuntime.InvokeVoidAsync("SwalLoading", "Agregando actividad...");
+            _resultado = null;
+            using var response = await Http.PostAsJsonAsync("api/Comercio/Actividades/Personas/Agregar", _agregaractividad);
+            _resultado = await response.Content.ReadFromJsonAsync<MRespuestaBoolMensaje>();
+            if (_resultado.resultado == true)
+            {
+                var Confirm1 = await jsRuntime.InvokeAsync<bool>("SwalNormal", "Correcto!", "La actividad se agrego correctamente!", "success", false);
+                if (Confirm1)
+                {
+                    await ModalInstance.CloseAsync(ModalResult.Ok<MAgregarActividadesAPersonas>(_agregaractividad));
+                }
+            }
+            else
+            {
+                var Confirm2 = await jsRuntime.InvokeAsync<bool>("SwalNormal", "Oops...", _resultado.mensaje, "error", false);
+                if (Confirm2)
+                {
+                    Cancel();
+                }
+            }
+        }
+        else
+        {
+
+        }
+    }
+
+    protected async Task InicioDeActividad()
+    {
+        var _inicioactividad = await jsRuntime.InvokeAsync<string>("DatePicker_YM");
+        _agregaractividad.Inicio_actividad = _inicioactividad + "-01";
+        //if (_agregaractividad.inicio_actividad_a > 0 && _agregaractividad.inicio_actividad_m > 0)
+        //{
+        //    _agregaractividad.inicio_actividad = _agregaractividad.inicio_actividad_a.tostring() + "-" + $"{_agregaractividad.inicio_actividad_m:d2}" + "-01";
+        //}
+    }
+
+    protected void SeleccionPersona(ChangeEventArgs e)
+    {
+        var uidPersona = int.Parse(e.Value.ToString());
+        _agregaractividad.Uid_persona = uidPersona;
+        //Console.WriteLine(idDireccion);
+    }
+
+    protected void SeleccionDireccion(ChangeEventArgs e)
+    {
+        var idDireccion = int.Parse(e.Value.ToString());
+        _agregaractividad.Id_direccion = idDireccion;
+        //Console.WriteLine(idDireccion);
+    }
+
+    protected async Task SeleccionDeActividad(ChangeEventArgs e)
+    {
+        var idActividad = int.Parse(e.Value.ToString());
+
+        foreach (var x in _listadeactividades)
+        {
+            if (x.Id == idActividad)
+            {
+                _agregaractividad.Codigo_actividad = x.Codigo;
+                _agregaractividad.Id_subtitulo = x.Id_subtitulos;
+                Nombre_actividad = x.Descripcion;
+                //Console.WriteLine($"Actividad : " + x.Descripcion.ToString());
+                //Console.WriteLine($"Codigo de actividad : " + x.Codigo.ToString());
+                //Console.WriteLine($"Id sub-grupo : " + x.Id_subtitulos.ToString());
+            }
+        }
+
+        foreach (var x in _listadesubgrupos)
+        {
+            if (x.Id == _agregaractividad.Id_subtitulo)
+            {
+                _agregaractividad.Id_titulo = x.Id_titulo;
+                Nombre_sub_grupo = x.Descripcion;
+                //Console.WriteLine($"re Id sub-grupo : " + x.Id.ToString());
+                //Console.WriteLine($"Nombre sub-grupo : " + x.Descripcion.ToString());
+                //Console.WriteLine($"Id grupo : " + x.Id_titulo.ToString());
+            }
+        }
+
+        foreach (var x in _listadegrupos)
+        {
+            if (x.Id == _agregaractividad.Id_titulo)
+            {
+                Nombre_grupo = x.Descripcion;
+                //Console.WriteLine($"re Id grupo : " + x.Id.ToString());
+                //Console.WriteLine($"Nombre grupo : " + x.Descripcion.ToString());
+            }
+        }
+
+        //Console.WriteLine($"id actividad : " + i.Id_subtitulos.ToString());
+        //Console.WriteLine($"Id actividad : " + i.Descripcion.ToString());
+
+        await jsRuntime.InvokeVoidAsync("LimpiarSelect", "sprovincia", "0");
+        await jsRuntime.InvokeVoidAsync("LimpiarSelect", "slocalidad", "0");
+
+
+    }
+
+    void ToggleLocal()
+    {
+        if (_agregaractividad.Local == false)
+        {
+            _agregaractividad.Nombre_local = "";
+        }
+        _agregaractividad.Local = !_agregaractividad.Local;
+    }
+
+    void Cancelar()
+    {
+        NavigationManager.NavigateTo("/Comercio/Actividades/MisActividades");
+    }
+
+    void Cancel()
+    {
+        ModalInstance.CancelAsync();
+
+    }
+}
